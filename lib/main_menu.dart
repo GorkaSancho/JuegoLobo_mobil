@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import "config_menu.dart";
 import 'how_to_play.dart';
 
 // Pantalla del menú principal.
@@ -32,8 +32,14 @@ class MainMenuScreen extends StatelessWidget {
               const SizedBox(height: 64),
               _MenuButton(
                 texto: 'Jugar',
-                onPressed: () => _proximamente(context, 'Jugar'),
-              ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ConfigScreen(),
+                    ),
+                  );
+                }),
               const SizedBox(height: 16),
               _MenuButton(
                 texto: 'Opcions',
