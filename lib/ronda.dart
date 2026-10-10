@@ -5,6 +5,19 @@ import 'jugador.dart';
 import 'partida.dart';
 import 'escollir_jugador.dart';
 
+// Els torns de la nit, en ordre. El número és la posició dins la llista.
+// Per canviar l'ordre de la nit només cal canviar l'ordre d'aquesta llista.
+enum Fase {
+  pobleDorm, // torn 0: el poble dorm durant 5 segons
+  tornVident, // torn 1: vident es desperta i descobreix un rol
+  videntDorm, // torn 2: la vident s'adorm durant 5 segons
+  tornLlops, // torn 3: els llops es desperten i trien la víctima
+  llopsDormen, // torn 4: els llops s'adormen (5 segons)
+  anunciMort, // torn 5: s'elimina el jugador
+  dia, // torn 6: es fa de dia
+  // aqui posem la resta de tornsp endents
+}
+
 // la ronda que conte els jugadors i l'estat de joc
 class RondaScreen extends StatefulWidget {
   final Partida partida;
@@ -16,79 +29,139 @@ class RondaScreen extends StatefulWidget {
 }
 
 class _RondaScreenState extends State<RondaScreen> {
-  // Rols que es desperten aquesta nit, en l'ordre oficial (només els que hi ha a la partida)
-  late final List<Rol> _torns;
-  int _torn = -1;
-  bool _dormint = true;
-  String _missatge = 'El poble dorm';
+  // Número del torn actual (enum fase)
+  int torn = 0;
+
+  // La fase que toca ara
+  Fase get fase => Fase.values[torn];
+
+  // Jugador que la vident ha triat
+  Jugador? jugadorVist;
 
   @override
   void initState() {
     super.initState();
-    _torns = [Rol.vident, Rol.llop].where(widget.partida.hiHaRol).toList();
-    _esperar();
+    // TORN 0
+    esperar(5, seguentTorn);
   }
 
   // esperem per donar temps a q tanquin els ulls i no es filtrin rols
-  void _esperar() {
-    Future.delayed(const Duration(seconds: 5), () {
-      if (!mounted) return;
-      setState(() {
-        _torn++;
-        _dormint = false;
-      });
+  void esperar(int segons, VoidCallback despres) {
+    Future.delayed(Duration(seconds: segons), () { // delay de 5 segons
+      // si el jugador ha sortit de la pantalla, no fem res
+      if (mounted) {
+        despres();
+      }
     });
   }
 
-  // final de torn
-  void _acabarTorn() {
+  // Passa al torn següent. Es crida cada vegada que acaba un torn.
+  void seguentTorn() {
     setState(() {
-      _missatge = _missatgeDormir(_torns[_torn]);
-      _dormint = true;
+      torn++;
+      jugadorVist = null;
+      // si no hi ha vident a la partida, saltem els seus torns
+      while (saltarTorn()) {
+        torn++;
+      }
+      // quan arriba l'anunci, s'elimina el jugador que han triat els llops
+      if (fase == Fase.anunciMort) {
+        eliminarVictima();
+      }
     });
-    _esperar();
+    // els torns en què dormen duren 5 segons i passen sols al següent
+    if (tornAutomatic()) {
+      esperar(5, seguentTorn);
+    }
   }
 
-  // enviar el missatge de dormir
-  String _missatgeDormir(Rol rol) {
-    return switch (rol) {
-      Rol.vident => 'La vident s\'adorm',
-      Rol.llop => 'Els llops s\'adormen',
-      _ => '${rol.nom} s\'adorm',
-    };
+  // Cert si el torn actual és de la vident i no hi ha cap a la partida
+  bool saltarTorn() {
+    bool hiHaVident = widget.partida.hiHaRol(Rol.vident);
+    bool esTornDeLaVident =
+        fase == Fase.tornVident || fase == Fase.videntDorm;
+    return esTornDeLaVident && !hiHaVident;
   }
 
+  // Els torns que consisteixen en esperar per no filtrar info
+  bool tornAutomatic() {
+    return fase == Fase.pobleDorm ||
+        fase == Fase.videntDorm ||
+        fase == Fase.llopsDormen;
+  }
+
+  // La vident ha confirmat el jugador que vol veure
+  void videntTriaJugador(Jugador triat) {
+    setState(() {
+      jugadorVist = triat;
+    });
+  }
+
+  // Els llops han confirmat la víctima
+  void llopsTrienVictima(Jugador victima) {
+    widget.partida.victimaLlops = victima;
+    debugPrint('Víctima dels llops: ${victima.nom} :(');
+    seguentTorn();
+  }
+
+  // Jugadors vius que es poden triar, sense els del rol indicat
+  // (la vident no es pot triar a ella mateixa i els llops no es mengen entre ells)
+  List<Jugador> jugadorsPerTriar(Rol rolExclos) {
+    List<Jugador> llista = [];
+    for (Jugador j in widget.partida.vius) {
+      if (j.rol != rolExclos) {
+        llista.add(j);
+      }
+    }
+    return llista;
+  }
+
+  void eliminarVictima() {
+    Jugador? victima = widget.partida.victimaLlops;
+    if (victima != null) {
+      victima.viu = false;
+    }
+  }
+
+  // pantalles
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 300),
-          child: _vistaActual(),
+          child: pantallaActual(),
         ),
       ),
     );
   }
 
-  Widget _vistaActual() {
-    if (_dormint) return _vistaMissatge(_missatge);
-    if (_torn >= _torns.length) return _vistaMissatge('Es fa de dia. Els jugadors obren els ulls', '☀️');
-    return switch (_torns[_torn]) {
-      Rol.vident => _TornVident(
-        key: ValueKey('torn$_torn'),
-        partida: widget.partida,
-        alAcabar: _acabarTorn,
-      ),
-      Rol.llop => _TornLlops(
-        key: ValueKey('torn$_torn'),
-        partida: widget.partida,
-        alAcabar: _acabarTorn,
-      ),
-      _ => const SizedBox.shrink(),
-    };
+  // pantalla que es mostre segons el torn
+  Widget pantallaActual() {
+    if (fase == Fase.pobleDorm) {
+      return pantallaMissatge('🌙', 'El poble dorm');
+    }
+    if (fase == Fase.tornVident) {
+      return tornVident();
+    }
+    if (fase == Fase.videntDorm) {
+      return pantallaMissatge('🌙', 'La vident s\'adorm');
+    }
+    if (fase == Fase.tornLlops) {
+      return tornLlops();
+    }
+    if (fase == Fase.llopsDormen) {
+      return pantallaMissatge('🌙', 'Els llops s\'adormen');
+    }
+    if (fase == Fase.anunciMort) {
+      return tornAnunci();
+    }
+
+    return pantallaMissatge('☀️', 'Es fa de dia...');
   }
 
-  Widget _vistaMissatge(String text, [String emoji = '🌙']) {
+  // Pantalla amb un emoji gran i un missatge al mig
+  Widget pantallaMissatge(String emoji, String text) {
     return SizedBox.expand(
       key: ValueKey(text),
       child: Column(
@@ -105,37 +178,29 @@ class _RondaScreenState extends State<RondaScreen> {
       ),
     );
   }
-}
 
-// Torn de la vident: tria un jugador i en veu el rol
-class _TornVident extends StatefulWidget {
-  final Partida partida;
-  final VoidCallback alAcabar;
+  // TORNS DELS ROLS ESPECIALS
 
-  const _TornVident({super.key, required this.partida, required this.alAcabar});
+  // Torn de la vident: primer tria un jugador i després en veu el rol
+  Widget tornVident() {
+    // còpia local: així Dart sap que no és null quan la fem servir més avall
+    final vist = jugadorVist;
 
-  @override
-  State<_TornVident> createState() => _TornVidentState();
-}
-
-class _TornVidentState extends State<_TornVident> {
-  Jugador? _vist;
-
-  @override
-  Widget build(BuildContext context) {
-    final vist = _vist;
+    // encara no ha triat: mostrem la llista de jugadors
     if (vist == null) {
       return SizedBox.expand(
+        key: const ValueKey('vident-triar'),
         child: TriaJugador(
           titol: 'La vident es desperta.\nTria un jugador per descobrir el seu rol',
-          opcions: widget.partida.vius
-              .where((j) => j.rol != Rol.vident)
-              .toList(),
-          alConfirmar: (j) => setState(() => _vist = j),
+          opcions: jugadorsPerTriar(Rol.vident),
+          alConfirmar: videntTriaJugador,
         ),
       );
     }
+
+    // ja ha triat: li ensenyem el rol d'aquest jugador
     return SizedBox.expand(
+      key: const ValueKey('vident-rol'),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -147,31 +212,80 @@ class _TornVidentState extends State<_TornVident> {
             style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 48),
-          FilledButton(onPressed: widget.alAcabar, child: const Text('Entès')),
+          FilledButton(onPressed: seguentTorn, child: const Text('Entès')),
         ],
       ),
     );
   }
-}
 
-// Torn dels llops: trien la víctima (cap llop apareix a la llista)
-class _TornLlops extends StatelessWidget {
-  final Partida partida;
-  final VoidCallback alAcabar;
-
-  const _TornLlops({super.key, required this.partida, required this.alAcabar});
-
-  @override
-  Widget build(BuildContext context) {
+  // Torn dels llops: trien la víctima
+  Widget tornLlops() {
     return SizedBox.expand(
+      key: const ValueKey('llops'),
       child: TriaJugador(
         titol: 'Els llops es desperten.\nTrieu qui voleu devorar',
-        opcions: partida.vius.where((j) => j.rol != Rol.llop).toList(),
-        alConfirmar: (j) {
-          partida.victimaLlops = j;
-          debugPrint('Víctima dels llops: ${j.nom} :(');
-          alAcabar();
-        },
+        opcions: jugadorsPerTriar(Rol.llop),
+        alConfirmar: llopsTrienVictima,
+      ),
+    );
+  }
+
+  // Anunci de l'alba: diem qui ha mort durant la nit i en revelem el rol
+  Widget tornAnunci() {
+    final victima = widget.partida.victimaLlops;
+
+    // ningú ha mort aquesta nit (no hauria de passar)
+    if (victima == null) {
+      return SizedBox.expand(
+        key: const ValueKey('anunci-ningu'),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('☀️', style: TextStyle(fontSize: 80)),
+            const SizedBox(height: 16),
+            const Text('Es fa de dia', style: TextStyle(fontSize: 20)),
+            const SizedBox(height: 16),
+            const Text(
+              'Aquesta nit no ha mort ningú',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 48),
+            FilledButton(
+              onPressed: seguentTorn,
+              child: const Text('Continuar'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ha mort algú: ensenyem el seu nom i el seu rol
+    return SizedBox.expand(
+      key: const ValueKey('anunci-mort'),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('Es fa de dia', style: TextStyle(fontSize: 20)),
+          const SizedBox(height: 8),
+          const Text('Aquesta nit ha mort...', style: TextStyle(fontSize: 20)),
+          const SizedBox(height: 16),
+          Text(
+            victima.nom,
+            style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Text(victima.rol.emoji, style: const TextStyle(fontSize: 96)),
+          Text(
+            victima.rol.nom,
+            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 48),
+          FilledButton(
+            onPressed: seguentTorn,
+            child: const Text('Continuar'),
+          ),
+        ],
       ),
     );
   }
