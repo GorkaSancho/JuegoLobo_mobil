@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'ConfiguracioPartida.dart';
 import 'jugador.dart';
+import 'ronda.dart';
+import 'partida.dart';
 
 class RepartimentRolsScreen extends StatefulWidget {
   final ConfiguracioPartida config;
@@ -16,17 +18,23 @@ class _RepartimentRolsScreenState extends State<RepartimentRolsScreen> {
   int _actual = 0;
   bool _mostrantRol = false;
 
+  // repartiment de rols
   @override
   void initState() {
     super.initState();
     final rols = <Rol>[
-      for (int i = 0; i < widget.config.nJugadors; i++)
-        i < widget.config.nLlops ? Rol.llop : Rol.vilata,
+      for (int i = 0; i < widget.config.nLlops; i++) Rol.llop,
+      if (widget.config.vident) Rol.vident,
+      if (widget.config.bruixa) Rol.bruixa,
+      if (widget.config.cazador) Rol.cazador,
     ];
+    while (rols.length < widget.config.nJugadors) {
+      rols.add(Rol.vilata);
+    }
     rols.shuffle();
     _jugadors = [
       for (int i = 0; i < rols.length; i++)
-        Jugador(widget.config.noms[i], rols[i]),
+        Jugador(widget.config.noms[i], rols[i]), // creem els jugadors
     ];
   }
 
@@ -54,6 +62,7 @@ class _RepartimentRolsScreenState extends State<RepartimentRolsScreen> {
     );
   }
 
+  // Mostrem els rols scrollejant
   Widget _vistaNom(Jugador jugador) {
     return GestureDetector(
       key: ValueKey('nom$_actual'),
@@ -123,7 +132,14 @@ class _RepartimentRolsScreenState extends State<RepartimentRolsScreen> {
           ),
           const SizedBox(height: 32),
           FilledButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RondaScreen(partida: Partida(_jugadors)),
+                ),
+              );
+            },
             child: const Text('Començar la primera nit'),
           ),
         ],
