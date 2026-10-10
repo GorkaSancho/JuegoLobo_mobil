@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'ConfiguracioPartida.dart';
+import 'repartiment_rols.dart';
 class ConfigScreen extends StatefulWidget {
   const ConfigScreen({super.key});
 
@@ -13,6 +14,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
   bool _hiHaVident = false;
   bool _hihaBruixa = false;
   bool _hihaCazador = false;
+  final List<TextEditingController> _controllersNoms = [];
 
   int get _maxLlops => (_numJugadors - 1) ~/ 2;
   int get _rolsEspecials =>
@@ -20,10 +22,35 @@ class _ConfigScreenState extends State<ConfigScreen> {
   int get _numVilatans => _numJugadors - _numLlops - _rolsEspecials;
 
   @override
+  void initState() {
+    super.initState();
+    _ajustarNoms();
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllersNoms) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _ajustarNoms() {
+    while (_controllersNoms.length < _numJugadors) {
+      _controllersNoms.add(
+        TextEditingController(text: 'Player ${_controllersNoms.length + 1}'),
+      );
+    }
+    while (_controllersNoms.length > _numJugadors) {
+      _controllersNoms.removeLast().dispose();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Configuració')),
-      body: Column(
+      body: ListView(
         children: [
           Text('Jugadors: $_numJugadors'),
           Slider(
@@ -34,6 +61,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
             onChanged: (v) => setState(() {
               _numJugadors = v.round();
               if (_numLlops > _maxLlops) _numLlops = _maxLlops;
+              _ajustarNoms();
             }),
           ),
           Text('Llops: $_numLlops'),
@@ -61,6 +89,17 @@ class _ConfigScreenState extends State<ConfigScreen> {
               onChanged: (v) => setState(()=> _hihaCazador = v)
           ),
           Text('Vilatans: $_numVilatans'),
+          for (int i = 0; i < _numJugadors; i++)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: TextField(
+                controller: _controllersNoms[i],
+                decoration: InputDecoration(
+                  labelText: 'Nom del jugador ${i + 1}',
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ),
           ElevatedButton(
             onPressed: () {
               final config = ConfiguracioPartida(
@@ -69,6 +108,13 @@ class _ConfigScreenState extends State<ConfigScreen> {
                 vident: _hiHaVident,
                 bruixa: _hihaBruixa,
                 cazador: _hihaCazador,
+                noms: _controllersNoms.map((c) => c.text).toList(),
+              );
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RepartimentRolsScreen(config: config),
+                ),
               );
             },
             child: const Text('Començar'),
