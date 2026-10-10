@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'jugador.dart';
 import 'partida.dart';
 import 'escollir_jugador.dart';
+import 'final_partida.dart';
 
 // Els torns de la nit, en ordre. El número és la posició dins la llista.
 // Per canviar l'ordre de la nit només cal canviar l'ordre d'aquesta llista.
@@ -14,7 +15,9 @@ enum Fase {
   tornLlops, // torn 3: els llops es desperten i trien la víctima
   llopsDormen, // torn 4: els llops s'adormen (5 segons)
   anunciMort, // torn 5: s'elimina el jugador
-  dia, // torn 6: es fa de dia
+  dia, // torn 6: el poble debat i vota a qui eliminar
+  anunciEliminat, // torn 7: s'anuncia qui ha eliminat el poble
+  fiRonda, // torn 8: final de la ronda, en arribar-hi comença una nit nova
   // aqui posem la resta de tornsp endents
 }
 
@@ -38,6 +41,9 @@ class _RondaScreenState extends State<RondaScreen> {
   // Jugador que la vident ha triat
   Jugador? jugadorVist;
 
+  // Jugador que el poble ha triat a la votació del dia
+  Jugador? jugadorEliminat;
+
   @override
   void initState() {
     super.initState();
@@ -57,9 +63,18 @@ class _RondaScreenState extends State<RondaScreen> {
 
   // Passa al torn següent. Es crida cada vegada que acaba un torn.
   void seguentTorn() {
+    // si la partida ha acabat, deixem la ronda i anem a la pantalla final
+    if (widget.partida.partidaAcabada) {
+      acabarPartida();
+      return;
+    }
     setState(() {
       torn++;
       jugadorVist = null;
+      // quan arribem al final de la ronda, comença una nit nova
+      if (fase == Fase.fiRonda) {
+        novaNit();
+      }
       // si no hi ha vident a la partida, saltem els seus torns
       while (saltarTorn()) {
         torn++;
@@ -67,6 +82,10 @@ class _RondaScreenState extends State<RondaScreen> {
       // quan arriba l'anunci, s'elimina el jugador que han triat els llops
       if (fase == Fase.anunciMort) {
         eliminarVictima();
+      }
+      // quan arriba l'anunci de l'eliminació, s'elimina el jugador que ha triat el poble
+      if (fase == Fase.anunciEliminat) {
+        eliminarEliminat();
       }
     });
     // els torns en què dormen duren 5 segons i passen sols al següent
@@ -90,6 +109,24 @@ class _RondaScreenState extends State<RondaScreen> {
         fase == Fase.llopsDormen;
   }
 
+  // Comença una nit nova: tornem al primer torn i esborrem el que va passar abans
+  void novaNit() {
+    torn = 0;
+    widget.partida.nit++;
+    widget.partida.victimaLlops = null;
+    jugadorEliminat = null;
+  }
+
+  // La partida s'ha acabat: anem a la pantalla final, que diu qui ha guanyat
+  void acabarPartida() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FinalPartidaScreen(partida: widget.partida),
+      ),
+    );
+  }
+
   // La vident ha confirmat el jugador que vol veure
   void videntTriaJugador(Jugador triat) {
     setState(() {
@@ -101,6 +138,13 @@ class _RondaScreenState extends State<RondaScreen> {
   void llopsTrienVictima(Jugador victima) {
     widget.partida.victimaLlops = victima;
     debugPrint('Víctima dels llops: ${victima.nom} :(');
+    seguentTorn();
+  }
+
+  // El poble ha confirmat a qui elimina
+  void pobleTriaEliminat(Jugador triat) {
+    jugadorEliminat = triat;
+    debugPrint('Eliminat pel poble: ${triat.nom}');
     seguentTorn();
   }
 
@@ -120,6 +164,13 @@ class _RondaScreenState extends State<RondaScreen> {
     Jugador? victima = widget.partida.victimaLlops;
     if (victima != null) {
       victima.viu = false;
+    }
+  }
+
+  void eliminarEliminat() {
+    Jugador? eliminat = jugadorEliminat;
+    if (eliminat != null) {
+      eliminat.viu = false;
     }
   }
 
@@ -156,8 +207,14 @@ class _RondaScreenState extends State<RondaScreen> {
     if (fase == Fase.anunciMort) {
       return tornAnunci();
     }
+    if (fase == Fase.dia) {
+      return tornVotacio();
+    }
+    if (fase == Fase.anunciEliminat) {
+      return tornAnunciEliminat();
+    }
 
-    return pantallaMissatge('☀️', 'Es fa de dia...');
+    return pantallaMissatge('🏁', 'Fi de la ronda');
   }
 
   // Pantalla amb un emoji gran i un missatge al mig
@@ -173,6 +230,40 @@ class _RondaScreenState extends State<RondaScreen> {
             text,
             textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Pantalla d'un jugador que ha mort o ha estat eliminat: en diu el nom i en revela el rol.
+  // La fem servir per la víctima dels llops i pel jugador que elimina el poble.
+  // frase1 i frase2 són els dos textos de dalt (així es poden canviar a cada anunci).
+  Widget pantallaMort(Jugador mort, String frase1, String frase2) {
+    return SizedBox.expand(
+      // cada torn té un número diferent, així la clau mai es repeteix
+      key: ValueKey('mort$torn'),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(frase1, style: const TextStyle(fontSize: 20)),
+          const SizedBox(height: 8),
+          Text(frase2, style: const TextStyle(fontSize: 20)),
+          const SizedBox(height: 16),
+          Text(
+            mort.nom,
+            style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Text(mort.rol.emoji, style: const TextStyle(fontSize: 96)),
+          Text(
+            mort.rol.nom,
+            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 48),
+          FilledButton(
+            onPressed: seguentTorn,
+            child: const Text('Continuar'),
           ),
         ],
       ),
@@ -261,32 +352,33 @@ class _RondaScreenState extends State<RondaScreen> {
     }
 
     // ha mort algú: ensenyem el seu nom i el seu rol
+    return pantallaMort(victima, 'Es fa de dia', 'Aquesta nit ha mort...');
+  }
+
+  // TORNS DEL DIA
+
+  // Votació del poble: mentre debaten, trien un jugador de tots els que queden vius
+  Widget tornVotacio() {
     return SizedBox.expand(
-      key: const ValueKey('anunci-mort'),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Text('Es fa de dia', style: TextStyle(fontSize: 20)),
-          const SizedBox(height: 8),
-          const Text('Aquesta nit ha mort...', style: TextStyle(fontSize: 20)),
-          const SizedBox(height: 16),
-          Text(
-            victima.nom,
-            style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          Text(victima.rol.emoji, style: const TextStyle(fontSize: 96)),
-          Text(
-            victima.rol.nom,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 48),
-          FilledButton(
-            onPressed: seguentTorn,
-            child: const Text('Continuar'),
-          ),
-        ],
+      key: const ValueKey('votacio'),
+      child: TriaJugador(
+        titol: 'El poble debat.\nTrieu qui voleu eliminar',
+        opcions: widget.partida.vius,
+        alConfirmar: pobleTriaEliminat,
       ),
     );
+  }
+
+  // Anunci de l'eliminació: diem qui ha eliminat el poble i en revelem el rol
+  Widget tornAnunciEliminat() {
+    final eliminat = jugadorEliminat;
+
+    // ningú ha estat eliminat (no hauria de passar)
+    if (eliminat == null) {
+      return pantallaMissatge('⚖️', 'Ningú ha estat eliminat');
+    }
+
+    // ensenyem el nom i el rol del jugador eliminat
+    return pantallaMort(eliminat, 'El poble ha decidit', 'Eliminat...');
   }
 }

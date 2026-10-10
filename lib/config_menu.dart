@@ -16,7 +16,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
   bool _hihaCazador = false;
   final List<TextEditingController> _controllersNoms = [];
 
-  int get _maxLlops => (_numJugadors - 1) ~/ 2;
+  int get _maxLlops => (_numJugadors - 2) ~/ 2;
   int get _rolsEspecials =>
       (_hiHaVident ? 1 : 0) + (_hihaBruixa ? 1 : 0) + (_hihaCazador ? 1 : 0);
   int get _numVilatans => _numJugadors - _numLlops - _rolsEspecials;
