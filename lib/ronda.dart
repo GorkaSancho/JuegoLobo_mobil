@@ -1,6 +1,9 @@
 // GUARDEM TOTA LA INFORMACIÓ D'UNA RONDA
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:just_audio/just_audio.dart';
 import 'jugador.dart';
 import 'partida.dart';
 import 'escollir_jugador.dart';
@@ -37,6 +40,8 @@ class RondaScreen extends StatefulWidget {
 }
 
 class _RondaScreenState extends State<RondaScreen> {
+  final AudioPlayer _wolfAudioPlayer = AudioPlayer();
+
   // Número del torn actual (enum fase)
   int torn = 0;
 
@@ -59,6 +64,22 @@ class _RondaScreenState extends State<RondaScreen> {
     super.initState();
     // TORN 0
     esperar(5, seguentTorn);
+  }
+
+  @override
+  void dispose() {
+    unawaited(_wolfAudioPlayer.dispose());
+    super.dispose();
+  }
+
+  Future<void> _reproduirSoLlops() async {
+    try {
+      await _wolfAudioPlayer.stop();
+      await _wolfAudioPlayer.setAsset('assets/sounds/llop.mp3');
+      await _wolfAudioPlayer.play();
+    } catch (error) {
+      debugPrint('No s\'ha pogut reproduir llop.mp3: $error');
+    }
   }
 
   // esperem per donar temps a q tanquin els ulls i no es filtrin rols
@@ -106,6 +127,9 @@ class _RondaScreenState extends State<RondaScreen> {
         eliminarEliminat();
       }
     });
+    if (fase == Fase.tornLlops) {
+      unawaited(_reproduirSoLlops());
+    }
     // els torns en què dormen duren 5 segons i passen sols al següent
     if (tornAutomatic()) {
       esperar(5, seguentTorn);
