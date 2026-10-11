@@ -8,12 +8,14 @@ class TriaJugador extends StatefulWidget {
   final String titol;
   final List<Jugador> opcions; // els jugadors q pot agafar
   final void Function(Jugador) alConfirmar;
+  final VoidCallback? alSaltar;
 
   const TriaJugador({
     super.key,
     required this.titol,
     required this.opcions,
     required this.alConfirmar,
+    this.alSaltar,
   });
 
   @override
@@ -56,6 +58,12 @@ class _TriaJugadorState extends State<TriaJugador> {
             child: const Text('Confirmar'),
           ),
         ),
+        if (widget.alSaltar != null)
+          TextButton(
+            onPressed: widget.alSaltar,
+            child: const Text('Saltar votació'),
+          ),
+        const SizedBox(height: 8),
       ],
     );
   }

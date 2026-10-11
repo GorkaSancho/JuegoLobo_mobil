@@ -37,7 +37,7 @@ class HowToPlayScreen extends StatelessWidget {
                     'curació i serveix per salvar la víctima dels llops. '
                     'L\'altra és de verí i serveix per eliminar un jugador.\n\n'
                     '🏹 Caçador: quan mor, ja sigui de nit o per votació, '
-                    'dispara i s\'emporta un altre jugador a la seva elecció.',
+                    'tria un jugador viu i se l\'emporta amb ell.',
               ),
               _Seccion(
                 titulo: 'La nit',

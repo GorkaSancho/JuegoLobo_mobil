@@ -14,10 +14,15 @@ enum Fase {
   videntDorm, // torn 2: la vident s'adorm durant 5 segons
   tornLlops, // torn 3: els llops es desperten i trien la víctima
   llopsDormen, // torn 4: els llops s'adormen (5 segons)
-  anunciMort, // torn 5: s'elimina el jugador
-  dia, // torn 6: el poble debat i vota a qui eliminar
-  anunciEliminat, // torn 7: s'anuncia qui ha eliminat el poble
-  fiRonda, // torn 8: final de la ronda, en arribar-hi comença una nit nova
+  tornBruixa,
+  bruixaDorm,
+  tornCacador,
+  anunciMort,
+  dia,
+  anunciEliminat,
+  tornCacadorDia,
+  anunciVictimaCacador,
+  fiRonda,
   // aqui posem la resta de tornsp endents
 }
 
@@ -43,6 +48,11 @@ class _RondaScreenState extends State<RondaScreen> {
 
   // Jugador que el poble ha triat a la votació del dia
   Jugador? jugadorEliminat;
+  Jugador? victimaCacadorDia;
+  Jugador? victimaBruixa;
+  bool bruixaHaSalvat = false;
+  bool triantVictimaBruixa = false;
+  List<Jugador> mortsNit = [];
 
   @override
   void initState() {
@@ -64,7 +74,13 @@ class _RondaScreenState extends State<RondaScreen> {
   // Passa al torn següent. Es crida cada vegada que acaba un torn.
   void seguentTorn() {
     // si la partida ha acabat, deixem la ronda i anem a la pantalla final
-    if (widget.partida.partidaAcabada) {
+    final cacadorPotDisparar =
+        fase == Fase.tornCacador ||
+        fase == Fase.tornCacadorDia ||
+        (fase == Fase.anunciEliminat &&
+            jugadorEliminat?.rol == Rol.cazador &&
+            widget.partida.vius.isNotEmpty);
+    if (widget.partida.partidaAcabada && !cacadorPotDisparar) {
       acabarPartida();
       return;
     }
@@ -75,13 +91,15 @@ class _RondaScreenState extends State<RondaScreen> {
       if (fase == Fase.fiRonda) {
         novaNit();
       }
-      // si no hi ha vident a la partida, saltem els seus torns
-      while (saltarTorn()) {
+      // Resol les morts abans del torn del caçador; salta els rols que no actuen.
+      while (true) {
+        if (fase == Fase.tornCacador) {
+          resoldreMortsNit();
+        }
+        if (!saltarTorn()) {
+          break;
+        }
         torn++;
-      }
-      // quan arriba l'anunci, s'elimina el jugador que han triat els llops
-      if (fase == Fase.anunciMort) {
-        eliminarVictima();
       }
       // quan arriba l'anunci de l'eliminació, s'elimina el jugador que ha triat el poble
       if (fase == Fase.anunciEliminat) {
@@ -97,16 +115,27 @@ class _RondaScreenState extends State<RondaScreen> {
   // Cert si el torn actual és de la vident i no hi ha cap a la partida
   bool saltarTorn() {
     bool hiHaVident = widget.partida.hiHaRol(Rol.vident);
-    bool esTornDeLaVident =
-        fase == Fase.tornVident || fase == Fase.videntDorm;
-    return esTornDeLaVident && !hiHaVident;
+    bool esTornDeLaVident = fase == Fase.tornVident || fase == Fase.videntDorm;
+    bool hiHaBruixa = widget.partida.hiHaRol(Rol.bruixa);
+    bool esTornDeLaBruixa = fase == Fase.tornBruixa || fase == Fase.bruixaDorm;
+    bool cacadorMortAquestaNit =
+      mortsNit.any((j) => j.rol == Rol.cazador);
+    bool esTornDelCacadorSenseAccio = fase == Fase.tornCacador &&
+      (!cacadorMortAquestaNit || widget.partida.vius.isEmpty);
+    bool cacadorNoEliminatDeDia = fase == Fase.tornCacadorDia &&
+        (jugadorEliminat?.rol != Rol.cazador || widget.partida.vius.isEmpty);
+    return (esTornDeLaVident && !hiHaVident) ||
+      (esTornDeLaBruixa && !hiHaBruixa) ||
+      esTornDelCacadorSenseAccio ||
+      cacadorNoEliminatDeDia;
   }
 
   // Els torns que consisteixen en esperar per no filtrar info
   bool tornAutomatic() {
     return fase == Fase.pobleDorm ||
         fase == Fase.videntDorm ||
-        fase == Fase.llopsDormen;
+      fase == Fase.llopsDormen ||
+      fase == Fase.bruixaDorm;
   }
 
   // Comença una nit nova: tornem al primer torn i esborrem el que va passar abans
@@ -115,6 +144,10 @@ class _RondaScreenState extends State<RondaScreen> {
     widget.partida.nit++;
     widget.partida.victimaLlops = null;
     jugadorEliminat = null;
+    victimaBruixa = null;
+    bruixaHaSalvat = false;
+    triantVictimaBruixa = false;
+    mortsNit = [];
   }
 
   // La partida s'ha acabat: anem a la pantalla final, que diu qui ha guanyat
@@ -141,10 +174,44 @@ class _RondaScreenState extends State<RondaScreen> {
     seguentTorn();
   }
 
+  void bruixaReviuVictima() {
+    if (!widget.partida.pocioReviureDisponible) return;
+    widget.partida.pocioReviureDisponible = false;
+    bruixaHaSalvat = true;
+    seguentTorn();
+  }
+
+  void bruixaComencaEnverinament() {
+    setState(() => triantVictimaBruixa = true);
+  }
+
+  void bruixaTriaVictima(Jugador triada) {
+    widget.partida.pocioMatarDisponible = false;
+    victimaBruixa = triada;
+    seguentTorn();
+  }
+
+  void cacadorTriaVictima(Jugador triada) {
+    triada.viu = false;
+    mortsNit.add(triada);
+    seguentTorn();
+  }
+
+  void cacadorTriaVictimaDeDia(Jugador triada) {
+    triada.viu = false;
+    victimaCacadorDia = triada;
+    seguentTorn();
+  }
+
   // El poble ha confirmat a qui elimina
   void pobleTriaEliminat(Jugador triat) {
     jugadorEliminat = triat;
     debugPrint('Eliminat pel poble: ${triat.nom}');
+    seguentTorn();
+  }
+
+  void pobleSaltaVotacio() {
+    jugadorEliminat = null;
     seguentTorn();
   }
 
@@ -160,10 +227,17 @@ class _RondaScreenState extends State<RondaScreen> {
     return llista;
   }
 
-  void eliminarVictima() {
-    Jugador? victima = widget.partida.victimaLlops;
-    if (victima != null) {
-      victima.viu = false;
+  void resoldreMortsNit() {
+    mortsNit = [];
+    final victimaLlops = widget.partida.victimaLlops;
+    if (victimaLlops != null && !bruixaHaSalvat) {
+      victimaLlops.viu = false;
+      mortsNit.add(victimaLlops);
+    }
+    final victimaVeri = victimaBruixa;
+    if (victimaVeri != null && victimaVeri.viu) {
+      victimaVeri.viu = false;
+      mortsNit.add(victimaVeri);
     }
   }
 
@@ -204,6 +278,15 @@ class _RondaScreenState extends State<RondaScreen> {
     if (fase == Fase.llopsDormen) {
       return pantallaMissatge('🌙', 'Els llops s\'adormen');
     }
+    if (fase == Fase.tornBruixa) {
+      return tornBruixa();
+    }
+    if (fase == Fase.bruixaDorm) {
+      return pantallaMissatge('🌙', 'La bruixa s\'adorm');
+    }
+    if (fase == Fase.tornCacador) {
+      return tornCacador();
+    }
     if (fase == Fase.anunciMort) {
       return tornAnunci();
     }
@@ -212,6 +295,15 @@ class _RondaScreenState extends State<RondaScreen> {
     }
     if (fase == Fase.anunciEliminat) {
       return tornAnunciEliminat();
+    }
+    if (fase == Fase.tornCacadorDia) {
+      return tornCacadorDeDia();
+    }
+    if (fase == Fase.anunciVictimaCacador) {
+      final victima = victimaCacadorDia;
+      if (victima != null) {
+        return pantallaMort(victima, 'El caçador ha disparat', 'Ha eliminat...');
+      }
     }
 
     return pantallaMissatge('🏁', 'Fi de la ronda');
@@ -321,12 +413,82 @@ class _RondaScreenState extends State<RondaScreen> {
     );
   }
 
+  Widget tornBruixa() {
+    final victima = widget.partida.victimaLlops;
+    final opcionsVeri = widget.partida.vius
+        .where((j) => j != victima && j.rol != Rol.bruixa)
+        .toList();
+
+    if (triantVictimaBruixa) {
+      return SizedBox.expand(
+        key: const ValueKey('bruixa-triar-victima'),
+        child: TriaJugador(
+          titol: 'Tria a qui vols enverinar',
+          opcions: opcionsVeri,
+          alConfirmar: bruixaTriaVictima,
+        ),
+      );
+    }
+
+    return SizedBox.expand(
+      key: const ValueKey('bruixa'),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text('La bruixa es desperta', style: TextStyle(fontSize: 28)),
+          const SizedBox(height: 16),
+          Text(
+            victima == null
+                ? 'Els llops no han triat cap víctima'
+                : 'Els llops han atacat ${victima.nom}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 20),
+          ),
+          const SizedBox(height: 32),
+          if (victima != null && widget.partida.pocioReviureDisponible)
+            FilledButton(
+              onPressed: bruixaReviuVictima,
+              child: const Text('Reviure la víctima'),
+            ),
+          if (widget.partida.pocioMatarDisponible && opcionsVeri.isNotEmpty)
+            FilledButton(
+              onPressed: bruixaComencaEnverinament,
+              child: const Text('Matar una altra persona'),
+            ),
+          TextButton(
+            onPressed: seguentTorn,
+            child: const Text('No fer servir cap poció'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget tornCacador() {
+    return SizedBox.expand(
+      key: const ValueKey('cacador'),
+      child: TriaJugador(
+        titol: 'El caçador ha mort aquesta nit. Tria algú per endur-te amb tu',
+        opcions: widget.partida.vius,
+        alConfirmar: cacadorTriaVictima,
+      ),
+    );
+  }
+
+  Widget tornCacadorDeDia() {
+    return SizedBox.expand(
+      key: const ValueKey('cacador-dia'),
+      child: TriaJugador(
+        titol: 'El caçador ha estat eliminat. Tria algú per endur-te amb tu',
+        opcions: widget.partida.vius,
+        alConfirmar: cacadorTriaVictimaDeDia,
+      ),
+    );
+  }
+
   // Anunci de l'alba: diem qui ha mort durant la nit i en revelem el rol
   Widget tornAnunci() {
-    final victima = widget.partida.victimaLlops;
-
-    // ningú ha mort aquesta nit (no hauria de passar)
-    if (victima == null) {
+    if (mortsNit.isEmpty) {
       return SizedBox.expand(
         key: const ValueKey('anunci-ningu'),
         child: Column(
@@ -351,8 +513,45 @@ class _RondaScreenState extends State<RondaScreen> {
       );
     }
 
-    // ha mort algú: ensenyem el seu nom i el seu rol
-    return pantallaMort(victima, 'Es fa de dia', 'Aquesta nit ha mort...');
+    return SizedBox.expand(
+      key: const ValueKey('anunci-morts'),
+      child: Column(
+        children: [
+          const SizedBox(height: 32),
+          const Text('☀️', style: TextStyle(fontSize: 80)),
+          const SizedBox(height: 8),
+          Text(
+            mortsNit.length == 1
+                ? 'Es fa de dia. Aquesta nit ha mort:'
+                : 'Es fa de dia. Aquesta nit han mort:',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+          Expanded(
+            child: ListView(
+              children: [
+                for (final mort in mortsNit)
+                  ListTile(
+                    leading: Text(
+                      mort.rol.emoji,
+                      style: const TextStyle(fontSize: 36),
+                    ),
+                    title: Text(mort.nom),
+                    subtitle: Text(mort.rol.nom),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: FilledButton(
+              onPressed: seguentTorn,
+              child: const Text('Continuar'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   // TORNS DEL DIA
@@ -365,6 +564,7 @@ class _RondaScreenState extends State<RondaScreen> {
         titol: 'El poble debat.\nTrieu qui voleu eliminar',
         opcions: widget.partida.vius,
         alConfirmar: pobleTriaEliminat,
+        alSaltar: pobleSaltaVotacio,
       ),
     );
   }
@@ -375,7 +575,26 @@ class _RondaScreenState extends State<RondaScreen> {
 
     // ningú ha estat eliminat (no hauria de passar)
     if (eliminat == null) {
-      return pantallaMissatge('⚖️', 'Ningú ha estat eliminat');
+      return SizedBox.expand(
+        key: const ValueKey('anunci-ningu-eliminat'),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text('⚖️', style: TextStyle(fontSize: 80)),
+            const SizedBox(height: 16),
+            const Text(
+              'Ningú ha estat eliminat',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 48),
+            FilledButton(
+              onPressed: seguentTorn,
+              child: const Text('Continuar'),
+            ),
+          ],
+        ),
+      );
     }
 
     // ensenyem el nom i el rol del jugador eliminat

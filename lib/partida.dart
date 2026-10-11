@@ -5,6 +5,8 @@ class Partida {
   final List<Jugador> jugadors; // tots els jugadors
   int nit = 1;
   Jugador? victimaLlops; // la victima pels llops
+  bool pocioReviureDisponible = true;
+  bool pocioMatarDisponible = true;
 
   Partida(this.jugadors);
 
@@ -15,11 +17,11 @@ class Partida {
   // Quants llops queden vius
   int get llopsVius => vius.where((j) => j.rol == Rol.llop).length;
 
-  // Definició de final de partida (llops igualen a la resta o no queden llops)
+  // La partida acaba si no queden llops o només queda un jugador no llop.
   bool get partidaAcabada {
     int llops = llopsVius;
     int resta = vius.length - llops;
-    return llops == 0 || llops >= resta; // guanya poble / guanyen llops
+    return llops == 0 || (llops > 0 && resta == 1);
   }
 
   // si es cert guanyen llops, altrament ha guanyat el poble
