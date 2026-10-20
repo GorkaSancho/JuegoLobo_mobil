@@ -3,6 +3,8 @@ import 'ConfiguracioPartida.dart';
 import 'jugador.dart';
 import 'ronda.dart';
 import 'partida.dart';
+import 'tema.dart';
+import 'widgets_tema.dart';
 
 class RepartimentRolsScreen extends StatefulWidget {
   final ConfiguracioPartida config;
@@ -48,16 +50,15 @@ class _RepartimentRolsScreenState extends State<RepartimentRolsScreen> {
   @override
   Widget build(BuildContext context) {
     final acabat = _actual >= _jugadors.length;
-    return Scaffold(
-      body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: acabat
-              ? _vistaFinal()
-              : _mostrantRol
-              ? _vistaRol(_jugadors[_actual])
-              : _vistaNom(_jugadors[_actual]),
-        ),
+    return PantallaJoc(
+      moment: MomentDia.nit,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: acabat
+            ? _vistaFinal()
+            : _mostrantRol
+                ? _vistaRol(_jugadors[_actual])
+                : _vistaNom(_jugadors[_actual]),
       ),
     );
   }
@@ -76,14 +77,23 @@ class _RepartimentRolsScreenState extends State<RepartimentRolsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('Passa el mòbil a', style: TextStyle(fontSize: 20)),
+            const Text(
+              'Passa el mòbil a',
+              style: TextStyle(fontSize: 20, color: ColorsJoc.osSuau),
+            ),
             const SizedBox(height: 16),
-            Text(
-              jugador.nom,
-              style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                jugador.nom,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: estilTitol(44),
+              ),
             ),
             const SizedBox(height: 64),
-            const Icon(Icons.keyboard_arrow_up, size: 48),
+            const Icon(Icons.keyboard_arrow_up, size: 48, color: ColorsJoc.ambre),
             const Text('Llisca cap amunt per veure el teu rol'),
           ],
         ),
@@ -98,19 +108,24 @@ class _RepartimentRolsScreenState extends State<RepartimentRolsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(jugador.nom, style: const TextStyle(fontSize: 20)),
-          const SizedBox(height: 16),
-          Text(jugador.rol.emoji, style: const TextStyle(fontSize: 96)),
           Text(
-            jugador.rol.nom,
-            style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+            jugador.nom,
+            style: const TextStyle(fontSize: 20, color: ColorsJoc.osSuau),
           ),
+          const SizedBox(height: 20),
+          AmbreEmoji(jugador.rol.emoji, mida: 72),
+          const SizedBox(height: 24),
+          Text(jugador.rol.nom, style: estilTitol(40)),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(jugador.rol.descripcio, textAlign: TextAlign.center),
+            child: Text(
+              jugador.rol.descripcio,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 17, height: 1.4),
+            ),
           ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 40),
           FilledButton(
             onPressed: _seguent,
             child: Text(esUltim ? 'Acabar' : 'Següent'),
@@ -126,9 +141,15 @@ class _RepartimentRolsScreenState extends State<RepartimentRolsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            'Tothom ja té el seu rol',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          const AmbreEmoji('🌙', mida: 60),
+          const SizedBox(height: 28),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              'Tothom ja té el seu rol',
+              textAlign: TextAlign.center,
+              style: estilTitol(30),
+            ),
           ),
           const SizedBox(height: 32),
           FilledButton(

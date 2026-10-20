@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'partida.dart';
+import 'tema.dart';
+import 'widgets_tema.dart';
 
 // classe que diu qui ha guanyat i el rol de cadascú pels curiosos
 class FinalPartidaScreen extends StatelessWidget {
@@ -9,54 +11,43 @@ class FinalPartidaScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // mirem qui ha guanyat i triem l'emoji i el text
-    String emoji;
-    String titol;
-    if (partida.guanyenLlops) {
-      emoji = '🐺';
-      titol = 'Han guanyat els llops!';
-    } else {
-      emoji = '🏡';
-      titol = 'Ha guanyat el poble!';
-    }
+    final dinosaures = partida.guanyenLlops;
+    final emoji = dinosaures ? '🦖' : '🏕️';
+    final titol = dinosaures
+        ? 'Han guanyat els dinosaures!'
+        : 'Ha guanyat l\'expedició!';
 
-    // tota la cosa visual
-    return Scaffold(
-      body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 48),
-            Text(emoji, style: const TextStyle(fontSize: 80)),
-            const SizedBox(height: 16),
-            Text(
-              titol,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+    return PantallaJoc(
+      // si guanyen els dinosaures es queda de nit; si no, surt el sol
+      moment: dinosaures ? MomentDia.nit : MomentDia.dia,
+      body: Column(
+        children: [
+          const SizedBox(height: 32),
+          AmbreEmoji(emoji, mida: 60),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(titol, textAlign: TextAlign.center, style: estilTitol(30)),
+          ),
+          const SizedBox(height: 16),
+          // llista de tots els jugadors amb el seu rol (els morts surten ratllats)
+          Expanded(
+            child: ListView(
+              children: [
+                for (final j in partida.jugadors)
+                  TargetaJugador(
+                    emoji: j.rol.emoji,
+                    nom: j.nom,
+                    rol: j.rol.nom,
+                    viu: j.viu,
+                  ),
+              ],
             ),
-            const SizedBox(height: 24),
-            // llista de tots els jugadors amb el seu rol (els morts surten ratllats)
-            Expanded(
-              child: ListView(
-                children: [
-                  for (final j in partida.jugadors)
-                    ListTile(
-                      leading: Text(
-                        j.rol.emoji,
-                        style: const TextStyle(fontSize: 28),
-                      ),
-                      title: Text(
-                        j.nom,
-                        style: TextStyle(
-                          decoration: j.viu ? null : TextDecoration.lineThrough,
-                        ),
-                      ),
-                      subtitle: Text(j.rol.nom),
-                    ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
               child: FilledButton(
                 onPressed: () {
                   // tornem a la primera pantalla de l'app (el menú principal)
@@ -65,8 +56,8 @@ class FinalPartidaScreen extends StatelessWidget {
                 child: const Text('Tornar al menú'),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

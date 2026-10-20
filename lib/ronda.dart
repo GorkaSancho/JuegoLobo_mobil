@@ -3,20 +3,22 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:just_audio/just_audio.dart';
 import 'jugador.dart';
 import 'partida.dart';
 import 'escollir_jugador.dart';
 import 'final_partida.dart';
+import 'so_joc.dart';
+import 'tema.dart';
+import 'widgets_tema.dart';
 
 // Els torns de la nit, en ordre. El número és la posició dins la llista.
 // Per canviar l'ordre de la nit només cal canviar l'ordre d'aquesta llista.
 enum Fase {
-  pobleDorm, // torn 0: el poble dorm durant 5 segons
-  tornVident, // torn 1: vident es desperta i descobreix un rol
-  videntDorm, // torn 2: la vident s'adorm durant 5 segons
-  tornLlops, // torn 3: els llops es desperten i trien la víctima
-  llopsDormen, // torn 4: els llops s'adormen (5 segons)
+  pobleDorm, // torn 0: el campament dorm durant 5 segons
+  tornVident, // torn 1: la paleontòloga es desperta i descobreix un rol
+  videntDorm, // torn 2: la paleontòloga s'adorm durant 5 segons
+  tornLlops, // torn 3: els dinosaures es desperten i trien la víctima
+  llopsDormen, // torn 4: els dinosaures s'adormen (5 segons)
   tornBruixa,
   bruixaDorm,
   tornCacador,
@@ -40,13 +42,17 @@ class RondaScreen extends StatefulWidget {
 }
 
 class _RondaScreenState extends State<RondaScreen> {
-  final AudioPlayer _wolfAudioPlayer = AudioPlayer();
+  final SoJoc _so = SoJoc();
 
   // Número del torn actual (enum fase)
   int torn = 0;
 
   // La fase que toca ara
   Fase get fase => Fase.values[torn];
+
+  // Fins al torn del caçador és de nit; després ja és de dia
+  MomentDia get _moment =>
+      fase.index <= Fase.tornCacador.index ? MomentDia.nit : MomentDia.dia;
 
   // Jugador que la vident ha triat
   Jugador? jugadorVist;
@@ -62,23 +68,36 @@ class _RondaScreenState extends State<RondaScreen> {
   @override
   void initState() {
     super.initState();
-    // TORN 0
+    // TORN 0: comença la primera nit
+    unawaited(_so.reproduir(So.nit));
     esperar(5, seguentTorn);
   }
 
   @override
   void dispose() {
-    unawaited(_wolfAudioPlayer.dispose());
+    unawaited(_so.dispose());
     super.dispose();
   }
 
-  Future<void> _reproduirSoLlops() async {
-    try {
-      await _wolfAudioPlayer.stop();
-      await _wolfAudioPlayer.setAsset('assets/sounds/llop.mp3');
-      await _wolfAudioPlayer.play();
-    } catch (error) {
-      debugPrint('No s\'ha pogut reproduir llop.mp3: $error');
+  // So que acompanya l'inici de cada fase.
+  // Sona sempre, passi el que passi dins del torn, perquè el mòbil el sent tothom
+  // i així no es filtra què ha fet cada rol.
+  void _sonarFase() {
+    switch (fase) {
+      case Fase.pobleDorm:
+        unawaited(_so.reproduir(So.nit)); // grills i vent
+        break;
+      case Fase.tornLlops:
+        unawaited(_so.reproduir(So.rugit)); // rugit de dinosaure
+        break;
+      case Fase.tornBruixa:
+        unawaited(_so.reproduir(So.riureBruixa)); // riure de bruixa
+        break;
+      case Fase.anunciMort:
+        unawaited(_so.reproduir(So.ocells)); // surt el sol i canten els ocells
+        break;
+      default:
+        break;
     }
   }
 
@@ -108,12 +127,12 @@ class _RondaScreenState extends State<RondaScreen> {
     setState(() {
       torn++;
       jugadorVist = null;
-      // quan arribem al final de la ronda, comença una nit nova
-      if (fase == Fase.fiRonda) {
-        novaNit();
-      }
       // Resol les morts abans del torn del caçador; salta els rols que no actuen.
       while (true) {
+        // quan arribem al final de la ronda, comença una nit nova
+        if (fase == Fase.fiRonda) {
+          novaNit();
+        }
         if (fase == Fase.tornCacador) {
           resoldreMortsNit();
         }
@@ -127,16 +146,14 @@ class _RondaScreenState extends State<RondaScreen> {
         eliminarEliminat();
       }
     });
-    if (fase == Fase.tornLlops) {
-      unawaited(_reproduirSoLlops());
-    }
+    _sonarFase();
     // els torns en què dormen duren 5 segons i passen sols al següent
     if (tornAutomatic()) {
       esperar(5, seguentTorn);
     }
   }
 
-  // Cert si el torn actual és de la vident i no hi ha cap a la partida
+  // Cert si el torn actual no s'ha de jugar (el rol no hi és o no actua)
   bool saltarTorn() {
     bool hiHaVident = widget.partida.hiHaRol(Rol.vident);
     bool esTornDeLaVident = fase == Fase.tornVident || fase == Fase.videntDorm;
@@ -148,10 +165,14 @@ class _RondaScreenState extends State<RondaScreen> {
       (!cacadorMortAquestaNit || widget.partida.vius.isEmpty);
     bool cacadorNoEliminatDeDia = fase == Fase.tornCacadorDia &&
         (jugadorEliminat?.rol != Rol.cazador || widget.partida.vius.isEmpty);
+    // si el caçador no ha disparat de dia, no hi ha res a anunciar
+    bool capDisparDeDia =
+        fase == Fase.anunciVictimaCacador && victimaCacadorDia == null;
     return (esTornDeLaVident && !hiHaVident) ||
       (esTornDeLaBruixa && !hiHaBruixa) ||
       esTornDelCacadorSenseAccio ||
-      cacadorNoEliminatDeDia;
+      cacadorNoEliminatDeDia ||
+      capDisparDeDia;
   }
 
   // Els torns que consisteixen en esperar per no filtrar info
@@ -168,6 +189,7 @@ class _RondaScreenState extends State<RondaScreen> {
     widget.partida.nit++;
     widget.partida.victimaLlops = null;
     jugadorEliminat = null;
+    victimaCacadorDia = null;
     victimaBruixa = null;
     bruixaHaSalvat = false;
     triantVictimaBruixa = false;
@@ -191,10 +213,10 @@ class _RondaScreenState extends State<RondaScreen> {
     });
   }
 
-  // Els llops han confirmat la víctima
+  // Els dinosaures han confirmat la víctima
   void llopsTrienVictima(Jugador victima) {
     widget.partida.victimaLlops = victima;
-    debugPrint('Víctima dels llops: ${victima.nom} :(');
+    debugPrint('Víctima dels dinosaures: ${victima.nom} :(');
     seguentTorn();
   }
 
@@ -240,7 +262,7 @@ class _RondaScreenState extends State<RondaScreen> {
   }
 
   // Jugadors vius que es poden triar, sense els del rol indicat
-  // (la vident no es pot triar a ella mateixa i els llops no es mengen entre ells)
+  // (la vident no es pot triar a ella mateixa i els dinosaures no es mengen entre ells)
   List<Jugador> jugadorsPerTriar(Rol rolExclos) {
     List<Jugador> llista = [];
     for (Jugador j in widget.partida.vius) {
@@ -275,12 +297,11 @@ class _RondaScreenState extends State<RondaScreen> {
   // pantalles
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
-          child: pantallaActual(),
-        ),
+    return PantallaJoc(
+      moment: _moment,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: pantallaActual(),
       ),
     );
   }
@@ -288,19 +309,20 @@ class _RondaScreenState extends State<RondaScreen> {
   // pantalla que es mostre segons el torn
   Widget pantallaActual() {
     if (fase == Fase.pobleDorm) {
-      return pantallaMissatge('🌙', 'El poble dorm');
+      return pantallaMissatge('🌙', 'El campament dorm',
+          detall: 'Tothom tanca els ulls');
     }
     if (fase == Fase.tornVident) {
       return tornVident();
     }
     if (fase == Fase.videntDorm) {
-      return pantallaMissatge('🌙', 'La vident s\'adorm');
+      return pantallaMissatge('🌙', 'La paleontòloga s\'adorm');
     }
     if (fase == Fase.tornLlops) {
       return tornLlops();
     }
     if (fase == Fase.llopsDormen) {
-      return pantallaMissatge('🌙', 'Els llops s\'adormen');
+      return pantallaMissatge('🌙', 'Els dinosaures s\'adormen');
     }
     if (fase == Fase.tornBruixa) {
       return tornBruixa();
@@ -333,27 +355,33 @@ class _RondaScreenState extends State<RondaScreen> {
     return pantallaMissatge('🏁', 'Fi de la ronda');
   }
 
-  // Pantalla amb un emoji gran i un missatge al mig
-  Widget pantallaMissatge(String emoji, String text) {
+  // Pantalla amb un emoji dins l'ambre i un missatge al mig
+  Widget pantallaMissatge(String emoji, String text, {String? detall}) {
     return SizedBox.expand(
       key: ValueKey(text),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 80)),
-          const SizedBox(height: 16),
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+          AmbreEmoji(emoji, mida: 64),
+          const SizedBox(height: 32),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(text, textAlign: TextAlign.center, style: estilTitol(32)),
           ),
+          if (detall != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              detall,
+              style: const TextStyle(fontSize: 18, color: ColorsJoc.osSuau),
+            ),
+          ],
         ],
       ),
     );
   }
 
   // Pantalla d'un jugador que ha mort o ha estat eliminat: en diu el nom i en revela el rol.
-  // La fem servir per la víctima dels llops i pel jugador que elimina el poble.
+  // La fem servir per la víctima dels dinosaures i pel jugador que elimina el poble.
   // frase1 i frase2 són els dos textos de dalt (així es poden canviar a cada anunci).
   Widget pantallaMort(Jugador mort, String frase1, String frase2) {
     return SizedBox.expand(
@@ -362,21 +390,31 @@ class _RondaScreenState extends State<RondaScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(frase1, style: const TextStyle(fontSize: 20)),
-          const SizedBox(height: 8),
-          Text(frase2, style: const TextStyle(fontSize: 20)),
-          const SizedBox(height: 16),
           Text(
-            mort.nom,
-            style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+            frase1,
+            style: const TextStyle(fontSize: 18, color: ColorsJoc.osSuau),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            frase2,
+            style: const TextStyle(fontSize: 18, color: ColorsJoc.osSuau),
           ),
           const SizedBox(height: 16),
-          Text(mort.rol.emoji, style: const TextStyle(fontSize: 96)),
-          Text(
-            mort.rol.nom,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              mort.nom,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: estilTitol(40),
+            ),
           ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 20),
+          AmbreEmoji(mort.rol.emoji, mida: 60),
+          const SizedBox(height: 16),
+          Text(mort.rol.nom, style: estilTitol(28, color: ColorsJoc.ambre)),
+          const SizedBox(height: 40),
           FilledButton(
             onPressed: seguentTorn,
             child: const Text('Continuar'),
@@ -388,7 +426,7 @@ class _RondaScreenState extends State<RondaScreen> {
 
   // TORNS DELS ROLS ESPECIALS
 
-  // Torn de la vident: primer tria un jugador i després en veu el rol
+  // Torn de la paleontòloga: primer tria un jugador i després en veu el rol
   Widget tornVident() {
     // còpia local: així Dart sap que no és null quan la fem servir més avall
     final vist = jugadorVist;
@@ -398,7 +436,7 @@ class _RondaScreenState extends State<RondaScreen> {
       return SizedBox.expand(
         key: const ValueKey('vident-triar'),
         child: TriaJugador(
-          titol: 'La vident es desperta.\nTria un jugador per descobrir el seu rol',
+          titol: 'La paleontòloga es desperta.\nTria un jugador per analitzar-ne l\'ADN',
           opcions: jugadorsPerTriar(Rol.vident),
           alConfirmar: videntTriaJugador,
         ),
@@ -411,26 +449,27 @@ class _RondaScreenState extends State<RondaScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(vist.nom, style: const TextStyle(fontSize: 20)),
-          const SizedBox(height: 16),
-          Text(vist.rol.emoji, style: const TextStyle(fontSize: 96)),
           Text(
-            vist.rol.nom,
-            style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold),
+            vist.nom,
+            style: const TextStyle(fontSize: 20, color: ColorsJoc.osSuau),
           ),
-          const SizedBox(height: 48),
+          const SizedBox(height: 20),
+          AmbreEmoji(vist.rol.emoji, mida: 64),
+          const SizedBox(height: 20),
+          Text(vist.rol.nom, style: estilTitol(40)),
+          const SizedBox(height: 40),
           FilledButton(onPressed: seguentTorn, child: const Text('Entès')),
         ],
       ),
     );
   }
 
-  // Torn dels llops: trien la víctima
+  // Torn dels dinosaures: trien la víctima
   Widget tornLlops() {
     return SizedBox.expand(
       key: const ValueKey('llops'),
       child: TriaJugador(
-        titol: 'Els llops es desperten.\nTrieu qui voleu devorar',
+        titol: 'Els dinosaures es desperten.\nTrieu qui voleu devorar',
         opcions: jugadorsPerTriar(Rol.llop),
         alConfirmar: llopsTrienVictima,
       ),
@@ -459,25 +498,36 @@ class _RondaScreenState extends State<RondaScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('La bruixa es desperta', style: TextStyle(fontSize: 28)),
+          const AmbreEmoji('🧪', mida: 52),
+          const SizedBox(height: 24),
+          Text('La bruixa es desperta', style: estilTitol(28)),
           const SizedBox(height: 16),
-          Text(
-            victima == null
-                ? 'Els llops no han triat cap víctima'
-                : 'Els llops han atacat ${victima.nom}',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              victima == null
+                  ? 'Els dinosaures no han triat cap víctima'
+                  : 'Els dinosaures han atacat ${victima.nom}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 20),
+            ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
           if (victima != null && widget.partida.pocioReviureDisponible)
-            FilledButton(
-              onPressed: bruixaReviuVictima,
-              child: const Text('Reviure la víctima'),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: FilledButton(
+                onPressed: bruixaReviuVictima,
+                child: const Text('Reviure la víctima'),
+              ),
             ),
           if (widget.partida.pocioMatarDisponible && opcionsVeri.isNotEmpty)
-            FilledButton(
-              onPressed: bruixaComencaEnverinament,
-              child: const Text('Matar una altra persona'),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: FilledButton(
+                onPressed: bruixaComencaEnverinament,
+                child: const Text('Matar una altra persona'),
+              ),
             ),
           TextButton(
             onPressed: seguentTorn,
@@ -518,16 +568,22 @@ class _RondaScreenState extends State<RondaScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('☀️', style: TextStyle(fontSize: 80)),
-            const SizedBox(height: 16),
-            const Text('Es fa de dia', style: TextStyle(fontSize: 20)),
-            const SizedBox(height: 16),
+            const AmbreEmoji('☀️', mida: 64),
+            const SizedBox(height: 28),
             const Text(
-              'Aquesta nit no ha mort ningú',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              'Es fa de dia',
+              style: TextStyle(fontSize: 20, color: ColorsJoc.osSuau),
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Aquesta nit no ha mort ningú',
+                textAlign: TextAlign.center,
+                style: estilTitol(30),
+              ),
+            ),
+            const SizedBox(height: 40),
             FilledButton(
               onPressed: seguentTorn,
               child: const Text('Continuar'),
@@ -541,27 +597,28 @@ class _RondaScreenState extends State<RondaScreen> {
       key: const ValueKey('anunci-morts'),
       child: Column(
         children: [
-          const SizedBox(height: 32),
-          const Text('☀️', style: TextStyle(fontSize: 80)),
-          const SizedBox(height: 8),
-          Text(
-            mortsNit.length == 1
-                ? 'Es fa de dia. Aquesta nit ha mort:'
-                : 'Es fa de dia. Aquesta nit han mort:',
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          const SizedBox(height: 24),
+          const AmbreEmoji('☀️', mida: 48),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Text(
+              mortsNit.length == 1
+                  ? 'Es fa de dia. Aquesta nit ha mort:'
+                  : 'Es fa de dia. Aquesta nit han mort:',
+              textAlign: TextAlign.center,
+              style: estilTitol(22),
+            ),
           ),
+          const SizedBox(height: 12),
           Expanded(
             child: ListView(
               children: [
                 for (final mort in mortsNit)
-                  ListTile(
-                    leading: Text(
-                      mort.rol.emoji,
-                      style: const TextStyle(fontSize: 36),
-                    ),
-                    title: Text(mort.nom),
-                    subtitle: Text(mort.rol.nom),
+                  TargetaJugador(
+                    emoji: mort.rol.emoji,
+                    nom: mort.nom,
+                    rol: mort.rol.nom,
                   ),
               ],
             ),
@@ -585,7 +642,7 @@ class _RondaScreenState extends State<RondaScreen> {
     return SizedBox.expand(
       key: const ValueKey('votacio'),
       child: TriaJugador(
-        titol: 'El poble debat.\nTrieu qui voleu eliminar',
+        titol: 'L\'expedició debat.\nTrieu qui voleu eliminar',
         opcions: widget.partida.vius,
         alConfirmar: pobleTriaEliminat,
         alSaltar: pobleSaltaVotacio,
@@ -597,21 +654,24 @@ class _RondaScreenState extends State<RondaScreen> {
   Widget tornAnunciEliminat() {
     final eliminat = jugadorEliminat;
 
-    // ningú ha estat eliminat (no hauria de passar)
+    // ningú ha estat eliminat (s'ha saltat la votació)
     if (eliminat == null) {
       return SizedBox.expand(
         key: const ValueKey('anunci-ningu-eliminat'),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('⚖️', style: TextStyle(fontSize: 80)),
-            const SizedBox(height: 16),
-            const Text(
-              'Ningú ha estat eliminat',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            const AmbreEmoji('⚖️', mida: 64),
+            const SizedBox(height: 28),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Text(
+                'Ningú ha estat eliminat',
+                textAlign: TextAlign.center,
+                style: estilTitol(30),
+              ),
             ),
-            const SizedBox(height: 48),
+            const SizedBox(height: 40),
             FilledButton(
               onPressed: seguentTorn,
               child: const Text('Continuar'),
@@ -622,6 +682,6 @@ class _RondaScreenState extends State<RondaScreen> {
     }
 
     // ensenyem el nom i el rol del jugador eliminat
-    return pantallaMort(eliminat, 'El poble ha decidit', 'Eliminat...');
+    return pantallaMort(eliminat, 'L\'expedició ha decidit', 'Eliminat...');
   }
 }

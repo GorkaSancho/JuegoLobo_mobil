@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'ConfiguracioPartida.dart';
 import 'repartiment_rols.dart';
+import 'tema.dart';
+import 'widgets_tema.dart';
+
 class ConfigScreen extends StatefulWidget {
   const ConfigScreen({super.key});
 
@@ -46,13 +49,27 @@ class _ConfigScreenState extends State<ConfigScreen> {
     }
   }
 
+  // Fila amb una etiqueta a l'esquerra i un valor gran a la dreta
+  Widget _fila(String etiqueta, String valor) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        children: [
+          Expanded(child: Text(etiqueta, style: const TextStyle(fontSize: 18))),
+          Text(valor, style: estilTitol(30, color: ColorsJoc.ambre)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Configuració')),
+    return PantallaJoc(
+      appBar: AppBar(title: const Text('Prepara l\'expedició')),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
-          Text('Jugadors: $_numJugadors'),
+          _fila('Jugadors', '$_numJugadors'),
           Slider(
             value: _numJugadors.toDouble(),
             min: 4,
@@ -64,7 +81,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
               _ajustarNoms();
             }),
           ),
-          Text('Llops: $_numLlops'),
+          _fila('🦖  Dinosaures', '$_numLlops'),
           if (_maxLlops > 1)
             Slider(
               value: _numLlops.toDouble(),
@@ -73,51 +90,81 @@ class _ConfigScreenState extends State<ConfigScreen> {
               divisions: _maxLlops - 1,
               onChanged: (v) => setState(() => _numLlops = v.round()),
             ),
-          SwitchListTile(
-            title: const Text('Vident'),
-            value: _hiHaVident,
-            onChanged: (v) => setState(() => _hiHaVident = v),
+          const SizedBox(height: 16),
+          Text('Rols especials', style: estilTitol(20)),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: ColorsJoc.vidre,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: ColorsJoc.vora),
+            ),
+            child: Column(
+              children: [
+                SwitchListTile(
+                  title: const Text('🦴  Paleontòloga'),
+                  value: _hiHaVident,
+                  onChanged: (v) => setState(() => _hiHaVident = v),
+                ),
+                SwitchListTile(
+                  title: const Text('🧪  Bruixa'),
+                  value: _hihaBruixa,
+                  onChanged: (v) => setState(() => _hihaBruixa = v),
+                ),
+                SwitchListTile(
+                  title: const Text('🏹  Caçador'),
+                  value: _hihaCazador,
+                  onChanged: (v) => setState(() => _hihaCazador = v),
+                ),
+              ],
+            ),
           ),
-          SwitchListTile(
-              title: const Text('Bruixa'),
-              value: _hihaBruixa,
-              onChanged: (v) => setState(() => _hihaBruixa = v)
-          ),
-          SwitchListTile(
-              title: const Text('Caçador'),
-              value: _hihaCazador,
-              onChanged: (v) => setState(()=> _hihaCazador = v)
-          ),
-          Text('Vilatans: $_numVilatans'),
+          _fila('🧭  Exploradors', '$_numVilatans'),
+          const SizedBox(height: 24),
+          Text('Noms dels jugadors', style: estilTitol(20)),
+          const SizedBox(height: 8),
           for (int i = 0; i < _numJugadors; i++)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: TextField(
                 controller: _controllersNoms[i],
                 decoration: InputDecoration(
                   labelText: 'Nom del jugador ${i + 1}',
-                  border: const OutlineInputBorder(),
+                  filled: true,
+                  fillColor: ColorsJoc.vidre,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(14),
+                    borderSide: const BorderSide(color: ColorsJoc.ambre, width: 2),
+                  ),
                 ),
               ),
             ),
-          ElevatedButton(
-            onPressed: () {
-              final config = ConfiguracioPartida(
-                nJugadors: _numJugadors,
-                nLlops: _numLlops,
-                vident: _hiHaVident,
-                bruixa: _hihaBruixa,
-                cazador: _hihaCazador,
-                noms: _controllersNoms.map((c) => c.text).toList(),
-              );
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => RepartimentRolsScreen(config: config),
-                ),
-              );
-            },
-            child: const Text('Començar'),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () {
+                final config = ConfiguracioPartida(
+                  nJugadors: _numJugadors,
+                  nLlops: _numLlops,
+                  vident: _hiHaVident,
+                  bruixa: _hihaBruixa,
+                  cazador: _hihaCazador,
+                  noms: _controllersNoms.map((c) => c.text).toList(),
+                );
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RepartimentRolsScreen(config: config),
+                  ),
+                );
+              },
+              child: const Text('Començar l\'expedició'),
+            ),
           ),
         ],
       ),

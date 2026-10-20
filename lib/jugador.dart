@@ -1,20 +1,21 @@
 // GUARDEM ELS ROLS I LA SEVA DESCRIPCIÓ
+// (els identificadors es mantenen: llop = dinosaure, vilata = explorador, vident = paleontòloga)
 
 enum Rol {
   vilata(
-    'Vilatà',
-    '🧑‍🌾',
-    'Descobreix qui són els llops i elimina\'ls amb el teu vot.',
+    'Explorador',
+    '🧭',
+    'Descobreix quins són els dinosaures i expulsa\'ls amb el teu vot.',
   ),
   llop(
-    'Llop',
-    '🐺',
-    'Elimina els vilatans sense que et descobreixin.',
+    'Dinosaure',
+    '🦖',
+    'Devora els exploradors sense que et descobreixin.',
   ),
   vident(
-    'Vident',
-    '🔮',
-    'Cada nit pots descobrir el rol d\'un jugador.',
+    'Paleontòloga',
+    '🦴',
+    'Cada nit pots analitzar l\'ADN d\'un jugador i descobrir-ne el rol.',
   ),
   bruixa(
     'Bruixa',
