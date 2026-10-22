@@ -7,6 +7,7 @@ import 'jugador.dart';
 import 'partida.dart';
 import 'escollir_jugador.dart';
 import 'final_partida.dart';
+import 'opcions.dart';
 import 'so_joc.dart';
 import 'tema.dart';
 import 'widgets_tema.dart';
@@ -69,8 +70,10 @@ class _RondaScreenState extends State<RondaScreen> {
   void initState() {
     super.initState();
     // TORN 0: comença la primera nit
-    unawaited(_so.reproduir(So.nit));
-    esperar(10, seguentTorn);
+    widget.partida.registre.add('Comença la inauguració del parc.');
+    widget.partida.registre.add('Nit 1: el parc queda a les fosques.');
+    _programarSoNit();
+    esperar(OpcionsJoc.duradaEntreFases, seguentTorn);
   }
 
   @override
@@ -85,7 +88,7 @@ class _RondaScreenState extends State<RondaScreen> {
   void _sonarFase() {
     switch (fase) {
       case Fase.pobleDorm:
-        unawaited(_so.reproduir(So.nit)); // grills i vent
+        _programarSoNit();
         break;
       case Fase.tornLlops:
         unawaited(_so.reproduir(So.rugit)); // rugit de dinosaure
@@ -106,6 +109,10 @@ class _RondaScreenState extends State<RondaScreen> {
       default:
         break;
     }
+  }
+
+  void _programarSoNit() {
+    unawaited(_so.reproduir(So.nit));
   }
 
   // esperem per donar temps a q tanquin els ulls i no es filtrin rols
@@ -152,11 +159,14 @@ class _RondaScreenState extends State<RondaScreen> {
       if (fase == Fase.anunciEliminat) {
         eliminarEliminat();
       }
+      if (fase == Fase.anunciMort) {
+        widget.partida.registre.add('Es fa de dia al parc.');
+      }
     });
     _sonarFase();
     // els torns en què dormen duren 5 segons i passen sols al següent
     if (tornAutomatic()) {
-      esperar(5, seguentTorn);
+      esperar(OpcionsJoc.duradaEntreFases, seguentTorn);
     }
   }
 
@@ -196,6 +206,7 @@ class _RondaScreenState extends State<RondaScreen> {
   void novaNit() {
     torn = 0;
     widget.partida.nit++;
+    widget.partida.registre.add('Nit ${widget.partida.nit}: cau la nit al parc.');
     widget.partida.victimaLlops = null;
     jugadorEliminat = null;
     victimaCacadorDia = null;
@@ -207,6 +218,11 @@ class _RondaScreenState extends State<RondaScreen> {
 
   // La partida s'ha acabat: anem a la pantalla final, que diu qui ha guanyat
   void acabarPartida() {
+    widget.partida.registre.add(
+      widget.partida.guanyenLlops
+          ? 'Fi de la partida: han guanyat els dinosaures.'
+          : 'Fi de la partida: han guanyat els visitants.',
+    );
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
@@ -220,11 +236,17 @@ class _RondaScreenState extends State<RondaScreen> {
     setState(() {
       jugadorAnalitzat = triat;
     });
+    widget.partida.registre.add(
+      'La genetista ha analitzat ${triat.nom}: és ${triat.rol.nom}.',
+    );
   }
 
   // Els dinosaures han confirmat la víctima
   void llopsTrienVictima(Jugador victima) {
     widget.partida.victimaLlops = victima;
+    widget.partida.registre.add(
+      'Els dinosaures han triat ${victima.nom} per atacar.',
+    );
     debugPrint('Víctima dels dinosaures: ${victima.nom} :(');
     seguentTorn();
   }
@@ -233,6 +255,12 @@ class _RondaScreenState extends State<RondaScreen> {
     if (!widget.partida.pocioReviureDisponible) return;
     widget.partida.pocioReviureDisponible = false;
     metgessaHaSalvat = true;
+    final victima = widget.partida.victimaLlops;
+    if (victima != null) {
+      widget.partida.registre.add(
+        'La metgessa ha salvat ${victima.nom} amb l\'antídot.',
+      );
+    }
     seguentTorn();
   }
 
@@ -243,30 +271,51 @@ class _RondaScreenState extends State<RondaScreen> {
   void metgessaTriaVictima(Jugador triada) {
     widget.partida.pocioMatarDisponible = false;
     victimaMetgessa = triada;
+    widget.partida.registre.add(
+      'La metgessa ha administrat el sedant a ${triada.nom}.',
+    );
     seguentTorn();
   }
 
   void cacadorTriaVictima(Jugador triada) {
     triada.viu = false;
     mortsNit.add(triada);
-    seguentTorn();
+    widget.partida.registre.add(
+      'El caçador ha disparat a ${triada.nom} durant la nit.',
+    );
+    _continuarDespresDelTret();
   }
 
   void cacadorTriaVictimaDeDia(Jugador triada) {
     triada.viu = false;
     victimaCacadorDia = triada;
+    widget.partida.registre.add(
+      'El caçador ha disparat a ${triada.nom} després de la votació.',
+    );
+    _continuarDespresDelTret();
+  }
+
+  void _continuarDespresDelTret() {
+    if (widget.partida.partidaAcabada) {
+      acabarPartida();
+      return;
+    }
     seguentTorn();
   }
 
   // El poble ha confirmat a qui elimina
   void pobleTriaEliminat(Jugador triat) {
     jugadorEliminat = triat;
+    widget.partida.registre.add(
+      'Els visitants han votat contra ${triat.nom}.',
+    );
     debugPrint('Eliminat pel poble: ${triat.nom}');
     seguentTorn();
   }
 
   void pobleSaltaVotacio() {
     jugadorEliminat = null;
+    widget.partida.registre.add('Els visitants no han arribat a cap acord.');
     seguentTorn();
   }
 
@@ -288,11 +337,20 @@ class _RondaScreenState extends State<RondaScreen> {
     if (victimaLlops != null && !metgessaHaSalvat) {
       victimaLlops.viu = false;
       mortsNit.add(victimaLlops);
+      widget.partida.registre.add(
+        '${victimaLlops.nom} ha mort durant l\'atac dels dinosaures.',
+      );
     }
     final victimaSedant = victimaMetgessa;
     if (victimaSedant != null && victimaSedant.viu) {
       victimaSedant.viu = false;
       mortsNit.add(victimaSedant);
+      widget.partida.registre.add(
+        '${victimaSedant.nom} ha quedat fora de combat pel sedant.',
+      );
+    }
+    if (mortsNit.isEmpty) {
+      widget.partida.registre.add('Aquesta nit no ha mort ningú.');
     }
   }
 
@@ -300,6 +358,9 @@ class _RondaScreenState extends State<RondaScreen> {
     Jugador? eliminat = jugadorEliminat;
     if (eliminat != null) {
       eliminat.viu = false;
+      widget.partida.registre.add(
+        'Els visitants han eliminat ${eliminat.nom}, que era ${eliminat.rol.nom}.',
+      );
     }
   }
 

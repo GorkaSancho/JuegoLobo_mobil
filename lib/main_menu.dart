@@ -1,19 +1,13 @@
 import 'package:flutter/material.dart';
 import 'config_menu.dart';
 import 'how_to_play.dart';
+import 'opcions.dart';
 import 'tema.dart';
 import 'widgets_tema.dart';
 
 // Pantalla del menú principal.
 class MainMenuScreen extends StatelessWidget {
   const MainMenuScreen({super.key});
-
-  // Missatge temporal per als botons que encara no tenen pantalla.
-  void _aviat(BuildContext context, String nom) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$nom: aviat disponible')),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +58,14 @@ class MainMenuScreen extends StatelessWidget {
               const SizedBox(height: 16),
               _MenuButton(
                 texto: 'Opcions',
-                onPressed: () => _aviat(context, 'Opcions'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const OpcionsScreen(),
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 16),
               _MenuButton(

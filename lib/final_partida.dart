@@ -46,19 +46,82 @@ class FinalPartidaScreen extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.all(16),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: () {
-                  // tornem a la primera pantalla de l'app (el menú principal)
-                  Navigator.popUntil(context, (route) => route.isFirst);
-                },
-                child: const Text('Tornar al menú'),
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              RegistrePartidaScreen(partida: partida),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.menu_book_outlined),
+                    label: const Text('Mostrar registre de partida'),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {
+                      // tornem a la primera pantalla de l'app (el menú principal)
+                      Navigator.popUntil(context, (route) => route.isFirst);
+                    },
+                    child: const Text('Tornar al menú'),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+}
+
+class RegistrePartidaScreen extends StatelessWidget {
+  final Partida partida;
+
+  const RegistrePartidaScreen({super.key, required this.partida});
+
+  @override
+  Widget build(BuildContext context) {
+    return PantallaJoc(
+      appBar: AppBar(title: const Text('Història de la partida')),
+      body: partida.registre.isEmpty
+          ? const Center(child: Text('Encara no hi ha cap esdeveniment.'))
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              itemCount: partida.registre.length,
+              separatorBuilder: (context, index) => const Divider(height: 24),
+              itemBuilder: (context, index) => Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 36,
+                    child: Text(
+                      '${index + 1}.',
+                      style: estilTitol(16, color: ColorsJoc.ambre),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      partida.registre[index],
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyLarge
+                          ?.copyWith(height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }

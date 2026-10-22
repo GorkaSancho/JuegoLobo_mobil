@@ -3,6 +3,7 @@ import 'jugador.dart';
 // Classe per guardar la informació de la partida
 class Partida {
   final List<Jugador> jugadors; // tots els jugadors
+  final List<String> registre = [];
   int nit = 1;
   Jugador? victimaLlops; // la victima pels llops
   bool pocioReviureDisponible = true;
