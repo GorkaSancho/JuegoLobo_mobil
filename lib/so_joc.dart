@@ -7,8 +7,9 @@ import 'package:just_audio/just_audio.dart';
 enum So {
   nit('assets/sounds/nit.mp3', true), // inici de la nit: grills i vent
   rugit('assets/sounds/rugit.mp3', false), // els dinosaures ataquen
-  riureBruixa('assets/sounds/riure_bruixa.mp3', false), // actua la bruixa
-  ocells('assets/sounds/ocells.mp3', true); // inici del dia
+  riureBruixa('assets/sounds/bruixa.mp3', false), // actua la científica
+  cacador('assets/sounds/caçador.mp3', false), // actua el caçador
+  ocells('assets/sounds/dia.mp3', true); // inici del dia
 
   final String asset;
   final bool ambient; // els ambients i els efectes tenen reproductor propi i no es trepitgen

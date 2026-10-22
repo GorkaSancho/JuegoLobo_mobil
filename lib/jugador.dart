@@ -1,31 +1,31 @@
 // GUARDEM ELS ROLS I LA SEVA DESCRIPCIÓ
-// (els identificadors es mantenen: llop = dinosaure, vilata = explorador, vident = paleontòloga)
+// (els identificadors es mantenen: llop = dinosaure, vident = paleontòloga)
 
 enum Rol {
-  vilata(
-    'Explorador',
-    '🧭',
-    'Descobreix quins són els dinosaures i expulsa\'ls amb el teu vot.',
+  visitant(
+    'Visitant',
+    '🎟️',
+    'No tens cap poder especial. Observa, debat i vota per descobrir els dinosaures.',
   ),
   llop(
     'Dinosaure',
     '🦖',
-    'Devora els exploradors sense que et descobreixin.',
+    'Devora els visitants sense que et descobreixin.',
   ),
   vident(
     'Paleontòloga',
     '🦴',
     'Cada nit pots analitzar l\'ADN d\'un jugador i descobrir-ne el rol.',
   ),
-  bruixa(
-    'Bruixa',
+  cientifica(
+    'Científica',
     '🧪',
-    'Tens dues pocions d\'un sol ús: una per curar i una altra per matar.',
+    'Tens dues dosis experimentals: una pot revertir una transformació i l\'altra eliminar un jugador.',
   ),
   cazador(
     'Caçador',
-    '🏹',
-    'Si mors, t\'emportes un altre jugador amb tu.',
+    '🔫',
+    'Si mors, pots fer un últim tret amb l\'escopeta i endur-te un altre jugador.',
   );
 
   final String nom;

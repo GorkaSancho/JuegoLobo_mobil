@@ -93,6 +93,10 @@ class _RondaScreenState extends State<RondaScreen> {
       case Fase.tornBruixa:
         unawaited(_so.reproduir(So.riureBruixa)); // riure de bruixa
         break;
+      case Fase.tornCacador:
+      case Fase.tornCacadorDia:
+        unawaited(_so.reproduir(So.cacador)); // actua el caçador
+        break;
       case Fase.anunciMort:
         unawaited(_so.reproduir(So.ocells)); // surt el sol i canten els ocells
         break;
@@ -157,7 +161,7 @@ class _RondaScreenState extends State<RondaScreen> {
   bool saltarTorn() {
     bool hiHaVident = widget.partida.hiHaRol(Rol.vident);
     bool esTornDeLaVident = fase == Fase.tornVident || fase == Fase.videntDorm;
-    bool hiHaBruixa = widget.partida.hiHaRol(Rol.bruixa);
+    bool hiHaCientifica = widget.partida.hiHaRol(Rol.cientifica);
     bool esTornDeLaBruixa = fase == Fase.tornBruixa || fase == Fase.bruixaDorm;
     bool cacadorMortAquestaNit =
       mortsNit.any((j) => j.rol == Rol.cazador);
@@ -169,7 +173,7 @@ class _RondaScreenState extends State<RondaScreen> {
     bool capDisparDeDia =
         fase == Fase.anunciVictimaCacador && victimaCacadorDia == null;
     return (esTornDeLaVident && !hiHaVident) ||
-      (esTornDeLaBruixa && !hiHaBruixa) ||
+      (esTornDeLaBruixa && !hiHaCientifica) ||
       esTornDelCacadorSenseAccio ||
       cacadorNoEliminatDeDia ||
       capDisparDeDia;
@@ -328,7 +332,7 @@ class _RondaScreenState extends State<RondaScreen> {
       return tornBruixa();
     }
     if (fase == Fase.bruixaDorm) {
-      return pantallaMissatge('🌙', 'La bruixa s\'adorm');
+      return pantallaMissatge('🌙', 'La científica s\'adorm');
     }
     if (fase == Fase.tornCacador) {
       return tornCacador();
@@ -479,7 +483,7 @@ class _RondaScreenState extends State<RondaScreen> {
   Widget tornBruixa() {
     final victima = widget.partida.victimaLlops;
     final opcionsVeri = widget.partida.vius
-        .where((j) => j != victima && j.rol != Rol.bruixa)
+        .where((j) => j != victima && j.rol != Rol.cientifica)
         .toList();
 
     if (triantVictimaBruixa) {
@@ -500,7 +504,7 @@ class _RondaScreenState extends State<RondaScreen> {
         children: [
           const AmbreEmoji('🧪', mida: 52),
           const SizedBox(height: 24),
-          Text('La bruixa es desperta', style: estilTitol(28)),
+          Text('La científica es desperta', style: estilTitol(28)),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -518,7 +522,7 @@ class _RondaScreenState extends State<RondaScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: FilledButton(
                 onPressed: bruixaReviuVictima,
-                child: const Text('Reviure la víctima'),
+                child: const Text('Administrar el sèrum'),
               ),
             ),
           if (widget.partida.pocioMatarDisponible && opcionsVeri.isNotEmpty)
@@ -526,12 +530,12 @@ class _RondaScreenState extends State<RondaScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: FilledButton(
                 onPressed: bruixaComencaEnverinament,
-                child: const Text('Matar una altra persona'),
+                child: const Text('Fer servir el compost'),
               ),
             ),
           TextButton(
             onPressed: seguentTorn,
-            child: const Text('No fer servir cap poció'),
+            child: const Text('No fer servir cap dosi'),
           ),
         ],
       ),
@@ -642,7 +646,7 @@ class _RondaScreenState extends State<RondaScreen> {
     return SizedBox.expand(
       key: const ValueKey('votacio'),
       child: TriaJugador(
-        titol: 'L\'expedició debat.\nTrieu qui voleu eliminar',
+        titol: 'Els visitants debaten.\nTrieu qui voleu eliminar',
         opcions: widget.partida.vius,
         alConfirmar: pobleTriaEliminat,
         alSaltar: pobleSaltaVotacio,
@@ -682,6 +686,6 @@ class _RondaScreenState extends State<RondaScreen> {
     }
 
     // ensenyem el nom i el rol del jugador eliminat
-    return pantallaMort(eliminat, 'L\'expedició ha decidit', 'Eliminat...');
+    return pantallaMort(eliminat, 'Els visitants han decidit', 'Eliminat...');
   }
 }

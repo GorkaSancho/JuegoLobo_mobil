@@ -2,6 +2,64 @@ import 'package:flutter/material.dart';
 import 'tema.dart';
 import 'widgets_tema.dart';
 
+const String _historiaInauguracio =
+    'Avui, el parc obre les portes per primera vegada. Entre '
+    'aplaudiments i flaixos, els científics presenten la seva '
+    'gran fita: dinosaures creats amb ADN de diverses espècies. '
+    'Però alguna cosa falla al laboratori. Escolteu trets dins el laboratori, '
+    'els llums s\'apaguen i el sistema de seguretat cau.\n\n'
+    'En el caos, ADN de dinosaure ha contaminat alguns visitants. '
+    'Quan arriba la nit, els primers comencen a transformar-se. '
+    'Les portes del parc són tancades. Ningú no pot sortir. '
+    'I entre vosaltres, algú ja no és del tot humà.';
+
+class HistoriaIntroScreen extends StatelessWidget {
+  const HistoriaIntroScreen({super.key, required this.alContinuar});
+
+  final VoidCallback alContinuar;
+
+  @override
+  Widget build(BuildContext context) {
+    return PantallaJoc(
+      moment: MomentDia.nit,
+      appBar: AppBar(title: const Text('La inauguració')),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const AmbreEmoji('🚨', mida: 72),
+                const SizedBox(height: 28),
+                Text(
+                  'LA NIT DE L\'OBERTURA',
+                  textAlign: TextAlign.center,
+                  style: estilTitol(30, color: ColorsJoc.ambre),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  _historiaInauguracio,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 18, height: 1.55),
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: alContinuar,
+                    child: const Text('Preparar la partida'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // Pantalla "Com es juga"
 class HowToPlayScreen extends StatelessWidget {
   const HowToPlayScreen({super.key});
@@ -16,38 +74,45 @@ class HowToPlayScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _Seccion(
+              titulo: 'El dia de la inauguració',
+              texto: _historiaInauguracio,
+            ),
+            _Seccion(
               titulo: 'Objectiu',
               texto:
-                  'A l\'illa s\'amaguen un o més dinosaures camuflats entre '
-                  'els exploradors. Els exploradors han de descobrir qui són '
-                  'i eliminar-los abans que devorin tota l\'expedició.',
+                  'Entre els visitants hi ha persones que s\'han transformat '
+                  'en dinosaures. La resta ha de descobrir qui són i '
+                  'eliminar-los abans que els dinosaures els devorin.',
             ),
             _Seccion(
               titulo: 'Els rols',
               texto:
-                  '🧭 Explorador: no té cap poder. Només pot observar, '
+                  '🎟️ Visitant: no té cap poder. Només pot observar, '
                   'debatre i votar.\n\n'
                   '🦖 Dinosaure: sap que és un dinosaure i la seva missió és '
-                  'passar desapercebut mentre va devorant exploradors.\n\n'
+                  'passar desapercebut mentre va devorant visitants.\n\n'
                   '🦴 Paleontòloga: cada nit tria un jugador i n\'analitza '
                   'l\'ADN per descobrir quin rol té. Ha d\'utilitzar aquesta '
                   'informació sense delatar-se.\n\n'
-                  '🧪 Bruixa: té dues pocions d\'un sol ús. Una és de '
-                  'curació i serveix per salvar la víctima dels dinosaures. '
-                  'L\'altra és de verí i serveix per eliminar un jugador.\n\n'
-                  '🏹 Caçador: quan mor, ja sigui de nit o per votació, '
-                  'tria un jugador viu i se l\'emporta amb ell.',
+                  '🧪 Científica: té dues dosis experimentals d\'un sol ús. '
+                  'El sèrum pot revertir la transformació i salvar la '
+                  'víctima dels dinosaures; el compost pot eliminar un '
+                  'jugador.\n\n'
+                  '🔫 Caçador: quan mor, ja sigui de nit o per votació, '
+                  'fa un últim tret amb l\'escopeta i tria un jugador viu '
+                  'per endur-se amb ell.',
             ),
             _Seccion(
               titulo: 'La nit',
               texto:
-                  'Quan cau la nit, el campament dorm i la selva es desperta. '
-                  'Es desperten per torns, en aquest ordre:\n\n'
+                  'Quan cau la nit, el parc tanca les portes, però els '
+                  'dinosaures surten a caçar. Els rols actuen per torns, en '
+                  'aquest ordre:\n\n'
                   '1. La paleontòloga tria un jugador i descobreix el seu rol.\n'
                   '2. Els dinosaures trien en secret una víctima per devorar. '
                   'Se sentirà un rugit!\n'
-                  '3. La bruixa veu qui ha estat atacat i decideix si fa '
-                  'servir alguna de les seves pocions.',
+                  '3. La científica veu qui ha estat atacat i decideix si '
+                  'fa servir alguna de les seves dosis.',
             ),
             _Seccion(
               titulo: 'El dia',
@@ -60,9 +125,9 @@ class HowToPlayScreen extends StatelessWidget {
             _Seccion(
               titulo: 'Com es guanya',
               texto:
-                  '✅ L\'expedició guanya si elimina tots els dinosaures.\n\n'
+                  '✅ Els visitants guanyen si eliminen tots els dinosaures.\n\n'
                   '❌ Els dinosaures guanyen si queden tants dinosaures com '
-                  'exploradors (o més).',
+                  'visitants (o més).',
             ),
             _Seccion(
               titulo: 'Consells',

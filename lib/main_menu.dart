@@ -36,7 +36,7 @@ class MainMenuScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                'El joc de l\'expedició',
+                'Caos el dia de la inauguració',
                 style: TextStyle(fontSize: 18, color: ColorsJoc.osSuau),
               ),
               const SizedBox(height: 48),
@@ -46,7 +46,18 @@ class MainMenuScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const ConfigScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => HistoriaIntroScreen(
+                        alContinuar: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ConfigScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   );
                 },
               ),

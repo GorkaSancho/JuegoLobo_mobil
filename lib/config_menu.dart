@@ -15,14 +15,14 @@ class _ConfigScreenState extends State<ConfigScreen> {
   int _numJugadors = 6;
   int _numLlops = 1;
   bool _hiHaVident = false;
-  bool _hihaBruixa = false;
+  bool _hihaCientifica = false;
   bool _hihaCazador = false;
   final List<TextEditingController> _controllersNoms = [];
 
   int get _maxLlops => (_numJugadors - 2) ~/ 2;
   int get _rolsEspecials =>
-      (_hiHaVident ? 1 : 0) + (_hihaBruixa ? 1 : 0) + (_hihaCazador ? 1 : 0);
-  int get _numVilatans => _numJugadors - _numLlops - _rolsEspecials;
+      (_hiHaVident ? 1 : 0) + (_hihaCientifica ? 1 : 0) + (_hihaCazador ? 1 : 0);
+  int get _numVisitants => _numJugadors - _numLlops - _rolsEspecials;
 
   @override
   void initState() {
@@ -65,7 +65,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
   @override
   Widget build(BuildContext context) {
     return PantallaJoc(
-      appBar: AppBar(title: const Text('Prepara l\'expedició')),
+      appBar: AppBar(title: const Text('Prepara la inauguració')),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [
@@ -107,19 +107,19 @@ class _ConfigScreenState extends State<ConfigScreen> {
                   onChanged: (v) => setState(() => _hiHaVident = v),
                 ),
                 SwitchListTile(
-                  title: const Text('🧪  Bruixa'),
-                  value: _hihaBruixa,
-                  onChanged: (v) => setState(() => _hihaBruixa = v),
+                  title: const Text('🧪  Científica'),
+                  value: _hihaCientifica,
+                  onChanged: (v) => setState(() => _hihaCientifica = v),
                 ),
                 SwitchListTile(
-                  title: const Text('🏹  Caçador'),
+                  title: const Text('🔫  Caçador'),
                   value: _hihaCazador,
                   onChanged: (v) => setState(() => _hihaCazador = v),
                 ),
               ],
             ),
           ),
-          _fila('🧭  Exploradors', '$_numVilatans'),
+          _fila('🎟️  Visitants', '$_numVisitants'),
           const SizedBox(height: 24),
           Text('Noms dels jugadors', style: estilTitol(20)),
           const SizedBox(height: 8),
@@ -152,7 +152,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
                   nJugadors: _numJugadors,
                   nLlops: _numLlops,
                   vident: _hiHaVident,
-                  bruixa: _hihaBruixa,
+                  cientifica: _hihaCientifica,
                   cazador: _hihaCazador,
                   noms: _controllersNoms.map((c) => c.text).toList(),
                 );
@@ -163,7 +163,7 @@ class _ConfigScreenState extends State<ConfigScreen> {
                   ),
                 );
               },
-              child: const Text('Començar l\'expedició'),
+              child: const Text('Repartir els rols'),
             ),
           ),
         ],

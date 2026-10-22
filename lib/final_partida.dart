@@ -12,10 +12,10 @@ class FinalPartidaScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dinosaures = partida.guanyenLlops;
-    final emoji = dinosaures ? '🦖' : '🏕️';
+    final emoji = dinosaures ? '🦖' : '🎟️';
     final titol = dinosaures
         ? 'Han guanyat els dinosaures!'
-        : 'Ha guanyat l\'expedició!';
+      : 'Han guanyat els visitants!';
 
     return PantallaJoc(
       // si guanyen els dinosaures es queda de nit; si no, surt el sol

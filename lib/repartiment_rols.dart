@@ -27,11 +27,11 @@ class _RepartimentRolsScreenState extends State<RepartimentRolsScreen> {
     final rols = <Rol>[
       for (int i = 0; i < widget.config.nLlops; i++) Rol.llop,
       if (widget.config.vident) Rol.vident,
-      if (widget.config.bruixa) Rol.bruixa,
+      if (widget.config.cientifica) Rol.cientifica,
       if (widget.config.cazador) Rol.cazador,
     ];
     while (rols.length < widget.config.nJugadors) {
-      rols.add(Rol.vilata);
+      rols.add(Rol.visitant);
     }
     rols.shuffle();
     _jugadors = [
