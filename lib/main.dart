@@ -14,7 +14,7 @@ class MiJuegoApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'JURÀSSIC',
+      title: 'NIT JURÀSSICA',
       debugShowCheckedModeBanner: false,
       theme: construirTema(),
       home: const MainMenuScreen(),

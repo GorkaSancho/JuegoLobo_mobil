@@ -24,7 +24,7 @@ class MainMenuScreen extends StatelessWidget {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  'JURÀSSIC',
+                  'NIT JURÀSSICA',
                   style: estilTitol(56).copyWith(letterSpacing: 3),
                 ),
               ),
