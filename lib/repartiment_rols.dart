@@ -26,8 +26,8 @@ class _RepartimentRolsScreenState extends State<RepartimentRolsScreen> {
     super.initState();
     final rols = <Rol>[
       for (int i = 0; i < widget.config.nLlops; i++) Rol.llop,
-      if (widget.config.vident) Rol.vident,
-      if (widget.config.cientifica) Rol.cientifica,
+      if (widget.config.genetista) Rol.genetista,
+      if (widget.config.metgessa) Rol.metgessa,
       if (widget.config.cazador) Rol.cazador,
     ];
     while (rols.length < widget.config.nJugadors) {

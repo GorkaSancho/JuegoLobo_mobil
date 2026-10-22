@@ -15,12 +15,12 @@ import 'widgets_tema.dart';
 // Per canviar l'ordre de la nit només cal canviar l'ordre d'aquesta llista.
 enum Fase {
   pobleDorm, // torn 0: el campament dorm durant 5 segons
-  tornVident, // torn 1: la paleontòloga es desperta i descobreix un rol
-  videntDorm, // torn 2: la paleontòloga s'adorm durant 5 segons
+  tornGenetista, // torn 1: la genetista es desperta i descobreix un rol
+  genetistaDorm, // torn 2: la genetista s'adorm durant 5 segons
   tornLlops, // torn 3: els dinosaures es desperten i trien la víctima
   llopsDormen, // torn 4: els dinosaures s'adormen (5 segons)
-  tornBruixa,
-  bruixaDorm,
+  tornMetgessa,
+  metgessaDorm,
   tornCacador,
   anunciMort,
   dia,
@@ -54,15 +54,15 @@ class _RondaScreenState extends State<RondaScreen> {
   MomentDia get _moment =>
       fase.index <= Fase.tornCacador.index ? MomentDia.nit : MomentDia.dia;
 
-  // Jugador que la vident ha triat
-  Jugador? jugadorVist;
+  // Jugador que la genetista ha triat
+  Jugador? jugadorAnalitzat;
 
   // Jugador que el poble ha triat a la votació del dia
   Jugador? jugadorEliminat;
   Jugador? victimaCacadorDia;
-  Jugador? victimaBruixa;
-  bool bruixaHaSalvat = false;
-  bool triantVictimaBruixa = false;
+  Jugador? victimaMetgessa;
+  bool metgessaHaSalvat = false;
+  bool triantVictimaMetgessa = false;
   List<Jugador> mortsNit = [];
 
   @override
@@ -70,7 +70,7 @@ class _RondaScreenState extends State<RondaScreen> {
     super.initState();
     // TORN 0: comença la primera nit
     unawaited(_so.reproduir(So.nit));
-    esperar(5, seguentTorn);
+    esperar(10, seguentTorn);
   }
 
   @override
@@ -90,8 +90,11 @@ class _RondaScreenState extends State<RondaScreen> {
       case Fase.tornLlops:
         unawaited(_so.reproduir(So.rugit)); // rugit de dinosaure
         break;
-      case Fase.tornBruixa:
-        unawaited(_so.reproduir(So.riureBruixa)); // riure de bruixa
+      case Fase.tornGenetista:
+        unawaited(_so.reproduir(So.genetista));
+        break;
+      case Fase.tornMetgessa:
+        unawaited(_so.reproduir(So.metgessa));
         break;
       case Fase.tornCacador:
       case Fase.tornCacadorDia:
@@ -130,7 +133,7 @@ class _RondaScreenState extends State<RondaScreen> {
     }
     setState(() {
       torn++;
-      jugadorVist = null;
+      jugadorAnalitzat = null;
       // Resol les morts abans del torn del caçador; salta els rols que no actuen.
       while (true) {
         // quan arribem al final de la ronda, comença una nit nova
@@ -159,10 +162,12 @@ class _RondaScreenState extends State<RondaScreen> {
 
   // Cert si el torn actual no s'ha de jugar (el rol no hi és o no actua)
   bool saltarTorn() {
-    bool hiHaVident = widget.partida.hiHaRol(Rol.vident);
-    bool esTornDeLaVident = fase == Fase.tornVident || fase == Fase.videntDorm;
-    bool hiHaCientifica = widget.partida.hiHaRol(Rol.cientifica);
-    bool esTornDeLaBruixa = fase == Fase.tornBruixa || fase == Fase.bruixaDorm;
+    bool hiHaGenetista = widget.partida.hiHaRol(Rol.genetista);
+    bool esTornDeLaGenetista =
+      fase == Fase.tornGenetista || fase == Fase.genetistaDorm;
+    bool hiHaMetgessa = widget.partida.hiHaRol(Rol.metgessa);
+    bool esTornDeLaMetgessa =
+      fase == Fase.tornMetgessa || fase == Fase.metgessaDorm;
     bool cacadorMortAquestaNit =
       mortsNit.any((j) => j.rol == Rol.cazador);
     bool esTornDelCacadorSenseAccio = fase == Fase.tornCacador &&
@@ -172,8 +177,8 @@ class _RondaScreenState extends State<RondaScreen> {
     // si el caçador no ha disparat de dia, no hi ha res a anunciar
     bool capDisparDeDia =
         fase == Fase.anunciVictimaCacador && victimaCacadorDia == null;
-    return (esTornDeLaVident && !hiHaVident) ||
-      (esTornDeLaBruixa && !hiHaCientifica) ||
+    return (esTornDeLaGenetista && !hiHaGenetista) ||
+      (esTornDeLaMetgessa && !hiHaMetgessa) ||
       esTornDelCacadorSenseAccio ||
       cacadorNoEliminatDeDia ||
       capDisparDeDia;
@@ -182,9 +187,9 @@ class _RondaScreenState extends State<RondaScreen> {
   // Els torns que consisteixen en esperar per no filtrar info
   bool tornAutomatic() {
     return fase == Fase.pobleDorm ||
-        fase == Fase.videntDorm ||
+        fase == Fase.genetistaDorm ||
       fase == Fase.llopsDormen ||
-      fase == Fase.bruixaDorm;
+      fase == Fase.metgessaDorm;
   }
 
   // Comença una nit nova: tornem al primer torn i esborrem el que va passar abans
@@ -194,9 +199,9 @@ class _RondaScreenState extends State<RondaScreen> {
     widget.partida.victimaLlops = null;
     jugadorEliminat = null;
     victimaCacadorDia = null;
-    victimaBruixa = null;
-    bruixaHaSalvat = false;
-    triantVictimaBruixa = false;
+    victimaMetgessa = null;
+    metgessaHaSalvat = false;
+    triantVictimaMetgessa = false;
     mortsNit = [];
   }
 
@@ -210,10 +215,10 @@ class _RondaScreenState extends State<RondaScreen> {
     );
   }
 
-  // La vident ha confirmat el jugador que vol veure
-  void videntTriaJugador(Jugador triat) {
+  // La genetista ha confirmat el jugador que vol analitzar
+  void genetistaTriaJugador(Jugador triat) {
     setState(() {
-      jugadorVist = triat;
+      jugadorAnalitzat = triat;
     });
   }
 
@@ -224,20 +229,20 @@ class _RondaScreenState extends State<RondaScreen> {
     seguentTorn();
   }
 
-  void bruixaReviuVictima() {
+  void metgessaAdministraAntidot() {
     if (!widget.partida.pocioReviureDisponible) return;
     widget.partida.pocioReviureDisponible = false;
-    bruixaHaSalvat = true;
+    metgessaHaSalvat = true;
     seguentTorn();
   }
 
-  void bruixaComencaEnverinament() {
-    setState(() => triantVictimaBruixa = true);
+  void metgessaTriaSedant() {
+    setState(() => triantVictimaMetgessa = true);
   }
 
-  void bruixaTriaVictima(Jugador triada) {
+  void metgessaTriaVictima(Jugador triada) {
     widget.partida.pocioMatarDisponible = false;
-    victimaBruixa = triada;
+    victimaMetgessa = triada;
     seguentTorn();
   }
 
@@ -266,7 +271,7 @@ class _RondaScreenState extends State<RondaScreen> {
   }
 
   // Jugadors vius que es poden triar, sense els del rol indicat
-  // (la vident no es pot triar a ella mateixa i els dinosaures no es mengen entre ells)
+  // (la genetista no es pot triar a ella mateixa i els dinosaures no es mengen entre ells)
   List<Jugador> jugadorsPerTriar(Rol rolExclos) {
     List<Jugador> llista = [];
     for (Jugador j in widget.partida.vius) {
@@ -280,14 +285,14 @@ class _RondaScreenState extends State<RondaScreen> {
   void resoldreMortsNit() {
     mortsNit = [];
     final victimaLlops = widget.partida.victimaLlops;
-    if (victimaLlops != null && !bruixaHaSalvat) {
+    if (victimaLlops != null && !metgessaHaSalvat) {
       victimaLlops.viu = false;
       mortsNit.add(victimaLlops);
     }
-    final victimaVeri = victimaBruixa;
-    if (victimaVeri != null && victimaVeri.viu) {
-      victimaVeri.viu = false;
-      mortsNit.add(victimaVeri);
+    final victimaSedant = victimaMetgessa;
+    if (victimaSedant != null && victimaSedant.viu) {
+      victimaSedant.viu = false;
+      mortsNit.add(victimaSedant);
     }
   }
 
@@ -316,11 +321,11 @@ class _RondaScreenState extends State<RondaScreen> {
       return pantallaMissatge('🌙', 'El campament dorm',
           detall: 'Tothom tanca els ulls');
     }
-    if (fase == Fase.tornVident) {
-      return tornVident();
+    if (fase == Fase.tornGenetista) {
+      return tornGenetista();
     }
-    if (fase == Fase.videntDorm) {
-      return pantallaMissatge('🌙', 'La paleontòloga s\'adorm');
+    if (fase == Fase.genetistaDorm) {
+      return pantallaMissatge('🌙', 'La genetista s\'adorm');
     }
     if (fase == Fase.tornLlops) {
       return tornLlops();
@@ -328,11 +333,11 @@ class _RondaScreenState extends State<RondaScreen> {
     if (fase == Fase.llopsDormen) {
       return pantallaMissatge('🌙', 'Els dinosaures s\'adormen');
     }
-    if (fase == Fase.tornBruixa) {
-      return tornBruixa();
+    if (fase == Fase.tornMetgessa) {
+      return tornMetgessa();
     }
-    if (fase == Fase.bruixaDorm) {
-      return pantallaMissatge('🌙', 'La científica s\'adorm');
+    if (fase == Fase.metgessaDorm) {
+      return pantallaMissatge('🌙', 'La metgessa s\'adorm');
     }
     if (fase == Fase.tornCacador) {
       return tornCacador();
@@ -430,26 +435,26 @@ class _RondaScreenState extends State<RondaScreen> {
 
   // TORNS DELS ROLS ESPECIALS
 
-  // Torn de la paleontòloga: primer tria un jugador i després en veu el rol
-  Widget tornVident() {
+  // Torn de la genetista: primer tria un jugador i després en veu el rol
+  Widget tornGenetista() {
     // còpia local: així Dart sap que no és null quan la fem servir més avall
-    final vist = jugadorVist;
+    final vist = jugadorAnalitzat;
 
     // encara no ha triat: mostrem la llista de jugadors
     if (vist == null) {
       return SizedBox.expand(
-        key: const ValueKey('vident-triar'),
+        key: const ValueKey('genetista-triar'),
         child: TriaJugador(
-          titol: 'La paleontòloga es desperta.\nTria un jugador per analitzar-ne l\'ADN',
-          opcions: jugadorsPerTriar(Rol.vident),
-          alConfirmar: videntTriaJugador,
+          titol: 'La genetista es desperta.\nTria un jugador per analitzar-ne l\'ADN',
+          opcions: jugadorsPerTriar(Rol.genetista),
+          alConfirmar: genetistaTriaJugador,
         ),
       );
     }
 
     // ja ha triat: li ensenyem el rol d'aquest jugador
     return SizedBox.expand(
-      key: const ValueKey('vident-rol'),
+      key: const ValueKey('genetista-rol'),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -480,31 +485,31 @@ class _RondaScreenState extends State<RondaScreen> {
     );
   }
 
-  Widget tornBruixa() {
+  Widget tornMetgessa() {
     final victima = widget.partida.victimaLlops;
-    final opcionsVeri = widget.partida.vius
-        .where((j) => j != victima && j.rol != Rol.cientifica)
+    final opcionsSedant = widget.partida.vius
+        .where((j) => j != victima && j.rol != Rol.metgessa)
         .toList();
 
-    if (triantVictimaBruixa) {
+    if (triantVictimaMetgessa) {
       return SizedBox.expand(
-        key: const ValueKey('bruixa-triar-victima'),
+        key: const ValueKey('metgessa-triar-victima'),
         child: TriaJugador(
-          titol: 'Tria a qui vols enverinar',
-          opcions: opcionsVeri,
-          alConfirmar: bruixaTriaVictima,
+          titol: 'Tria a qui vols administrar el sedant',
+          opcions: opcionsSedant,
+          alConfirmar: metgessaTriaVictima,
         ),
       );
     }
 
     return SizedBox.expand(
-      key: const ValueKey('bruixa'),
+      key: const ValueKey('metgessa'),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const AmbreEmoji('🧪', mida: 52),
+          const AmbreEmoji('🩺', mida: 52),
           const SizedBox(height: 24),
-          Text('La científica es desperta', style: estilTitol(28)),
+          Text('La metgessa es desperta', style: estilTitol(28)),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -521,21 +526,21 @@ class _RondaScreenState extends State<RondaScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: FilledButton(
-                onPressed: bruixaReviuVictima,
-                child: const Text('Administrar el sèrum'),
+                onPressed: metgessaAdministraAntidot,
+                child: const Text('Administrar l\'antídot'),
               ),
             ),
-          if (widget.partida.pocioMatarDisponible && opcionsVeri.isNotEmpty)
+          if (widget.partida.pocioMatarDisponible && opcionsSedant.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: FilledButton(
-                onPressed: bruixaComencaEnverinament,
-                child: const Text('Fer servir el compost'),
+                onPressed: metgessaTriaSedant,
+                child: const Text('Administrar el sedant'),
               ),
             ),
           TextButton(
             onPressed: seguentTorn,
-            child: const Text('No fer servir cap dosi'),
+            child: const Text('No administrar cap tractament'),
           ),
         ],
       ),

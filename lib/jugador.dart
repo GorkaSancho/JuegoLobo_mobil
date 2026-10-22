@@ -1,5 +1,5 @@
 // GUARDEM ELS ROLS I LA SEVA DESCRIPCIÓ
-// (els identificadors es mantenen: llop = dinosaure, vident = paleontòloga)
+// (llop = dinosaure; els visitants són el rol base)
 
 enum Rol {
   visitant(
@@ -12,15 +12,15 @@ enum Rol {
     '🦖',
     'Devora els visitants sense que et descobreixin.',
   ),
-  vident(
-    'Paleontòloga',
-    '🦴',
+  genetista(
+    'Genetista',
+    '🧬',
     'Cada nit pots analitzar l\'ADN d\'un jugador i descobrir-ne el rol.',
   ),
-  cientifica(
-    'Científica',
-    '🧪',
-    'Tens dues dosis experimentals: una pot revertir una transformació i l\'altra eliminar un jugador.',
+  metgessa(
+    'Metgessa',
+    '🩺',
+    'Tens un antídot per salvar una víctima i un sedant per neutralitzar un altre jugador.',
   ),
   cazador(
     'Caçador',

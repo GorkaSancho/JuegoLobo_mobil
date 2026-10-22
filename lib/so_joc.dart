@@ -7,7 +7,8 @@ import 'package:just_audio/just_audio.dart';
 enum So {
   nit('assets/sounds/nit.mp3', true), // inici de la nit: grills i vent
   rugit('assets/sounds/rugit.mp3', false), // els dinosaures ataquen
-  riureBruixa('assets/sounds/bruixa.mp3', false), // actua la científica
+  genetista('assets/sounds/vident.mp3', false), // actua la genetista
+  metgessa('assets/sounds/bruixa.mp3', false), // actua la metgessa
   cacador('assets/sounds/caçador.mp3', false), // actua el caçador
   ocells('assets/sounds/dia.mp3', true); // inici del dia
 
@@ -29,6 +30,12 @@ class SoJoc {
     } catch (error) {
       debugPrint('No s\'ha pogut reproduir ${so.asset}: $error');
     }
+  }
+
+  Future<void> reproduirPrevisualitzacio(So so) async {
+    await _ambient.stop();
+    await _efectes.stop();
+    await reproduir(so);
   }
 
   Future<void> dispose() async {

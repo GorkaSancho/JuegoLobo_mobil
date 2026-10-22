@@ -14,14 +14,14 @@ class ConfigScreen extends StatefulWidget {
 class _ConfigScreenState extends State<ConfigScreen> {
   int _numJugadors = 6;
   int _numLlops = 1;
-  bool _hiHaVident = false;
-  bool _hihaCientifica = false;
+  bool _hiHaGenetista = false;
+  bool _hihaMetgessa = false;
   bool _hihaCazador = false;
   final List<TextEditingController> _controllersNoms = [];
 
   int get _maxLlops => (_numJugadors - 2) ~/ 2;
   int get _rolsEspecials =>
-      (_hiHaVident ? 1 : 0) + (_hihaCientifica ? 1 : 0) + (_hihaCazador ? 1 : 0);
+      (_hiHaGenetista ? 1 : 0) + (_hihaMetgessa ? 1 : 0) + (_hihaCazador ? 1 : 0);
   int get _numVisitants => _numJugadors - _numLlops - _rolsEspecials;
 
   @override
@@ -102,14 +102,14 @@ class _ConfigScreenState extends State<ConfigScreen> {
             child: Column(
               children: [
                 SwitchListTile(
-                  title: const Text('🦴  Paleontòloga'),
-                  value: _hiHaVident,
-                  onChanged: (v) => setState(() => _hiHaVident = v),
+                  title: const Text('🧬  Genetista'),
+                  value: _hiHaGenetista,
+                  onChanged: (v) => setState(() => _hiHaGenetista = v),
                 ),
                 SwitchListTile(
-                  title: const Text('🧪  Científica'),
-                  value: _hihaCientifica,
-                  onChanged: (v) => setState(() => _hihaCientifica = v),
+                  title: const Text('🩺  Metgessa'),
+                  value: _hihaMetgessa,
+                  onChanged: (v) => setState(() => _hihaMetgessa = v),
                 ),
                 SwitchListTile(
                   title: const Text('🔫  Caçador'),
@@ -151,8 +151,8 @@ class _ConfigScreenState extends State<ConfigScreen> {
                 final config = ConfiguracioPartida(
                   nJugadors: _numJugadors,
                   nLlops: _numLlops,
-                  vident: _hiHaVident,
-                  cientifica: _hihaCientifica,
+                  genetista: _hiHaGenetista,
+                  metgessa: _hihaMetgessa,
                   cazador: _hihaCazador,
                   noms: _controllersNoms.map((c) => c.text).toList(),
                 );
